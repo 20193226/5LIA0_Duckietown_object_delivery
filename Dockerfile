@@ -1,7 +1,7 @@
 # parameters
-ARG REPO_NAME="<REPO_NAME_HERE>"
-ARG DESCRIPTION="<DESCRIPTION_HERE>"
-ARG MAINTAINER="<YOUR_FULL_NAME> (<YOUR_EMAIL_ADDRESS>)"
+ARG REPO_NAME="local-duckie-20193226"
+ARG DESCRIPTION=""
+ARG MAINTAINER="ErikvanHoren (e.e.w.v.horen@student.tue.nl)"
 # pick an icon from: https://fontawesome.com/v4.7.0/icons/
 ARG ICON="cube"
 
@@ -54,6 +54,9 @@ ENV DT_MODULE_TYPE="${REPO_NAME}" \
 COPY ./dependencies-apt.txt "${REPO_PATH}/"
 RUN dt-apt-install ${REPO_PATH}/dependencies-apt.txt
 
+# install yolov5 model
+RUN git clone -b v7.0 https://github.com/ultralytics/yolov5 "/yolov5"
+
 # install python3 dependencies
 ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
@@ -89,3 +92,5 @@ LABEL org.duckietown.label.module.type="${REPO_NAME}" \
     org.duckietown.label.maintainer="${MAINTAINER}"
 # <== Do not change the code above this line
 # <==================================================
+# disable YOLOv5 auto-update
+ENV YOLOv5_AUTOINSTALL=false
