@@ -33,71 +33,9 @@ def run(input, exception_on_failure=False):
 
 
 class Wrapper:
-    def __init__(self, aido_eval=False):
-        model_name = MODEL_NAME()
-
-        models_path = os.path.join(ASSETS_DIR, "nn_models")
-        dcss_models_path = "courses/mooc/objdet/data/nn_models/"
-
-        dcss_weight_file_path = os.path.join(dcss_models_path, f"{model_name}.pt")
-        weight_file_path = os.path.join(models_path, f"{model_name}.pt")
-
-        if aido_eval:
-            assert os.path.exists(weight_file_path)
-        else:
-            dt_token = DT_TOKEN()
-
-            if get_device_hardware_brand() == DeviceHardwareBrand.JETSON_NANO:
-                # when running on the robot, we store models in the persistent `data` directory
-                models_path = "/data/nn_models"
-                weight_file_path = os.path.join(models_path, f"{model_name}.pt")
-
-            # make models destination dir if it does not exist
-            if not os.path.exists(models_path):
-                os.makedirs(models_path)
-
-            # open a pointer to the DCSS storage unit
-            client = DataClient(dt_token)
-            storage = client.storage("user")
-
-            # make sure the model exists
-            metadata = None
-            try:
-                metadata = storage.head(dcss_weight_file_path)
-            except FileNotFoundError:
-                print(f"FATAL: Model '{model_name}' not found. It was expected at '{dcss_weight_file_path}'.")
-                exit(1)
-
-            # extract current ETag
-            remote_etag = eval(metadata["ETag"])
-            print(f"Remote ETag for model '{model_name}': {remote_etag}")
-
-            # read local etag
-            local_etag = None
-            etag_file_path = f"{weight_file_path}.etag"
-            if os.path.exists(etag_file_path):
-                with open(etag_file_path, "rt") as fin:
-                    local_etag = fin.read().strip()
-                print(f"Found local ETag for model '{model_name}': {local_etag}")
-            else:
-                print(f"No local model found with name '{model_name}'")
-
-            # do not download if already up-to-date
-            print(f"DEBUG: Comparing [{local_etag}] <> [{remote_etag}]")
-            if local_etag != remote_etag:
-                if local_etag:
-                    print(f"Found a different model on DCSS.")
-                print(f"Downloading model '{model_name}' from DCSS...")
-                # download model
-                download = storage.download(dcss_weight_file_path, weight_file_path, force=True)
-                download.join()
-                assert os.path.exists(weight_file_path)
-                # write ETag to file
-                with open(etag_file_path, "wt") as fout:
-                    fout.write(remote_etag)
-                print(f"Model with ETag '{remote_etag}' downloaded!")
-            else:
-                print(f"Local model is up-to-date!")
+    def __init__(self):
+        weight_file_path = "/code/catkin_ws/src/local-duckie-20193226/packages/nn_model/weights/best.pt"
+        assert os.path.exists(weight_file_path)
 
         # load pytorch model
         self.model = Model(weight_file_path)

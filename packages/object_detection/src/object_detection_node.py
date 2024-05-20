@@ -6,7 +6,7 @@ import rospy
 
 from duckietown.dtros import DTROS, NodeType, TopicType
 from duckietown_msgs.msg import Twist2DStamped
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage
 
@@ -34,7 +34,7 @@ class ObjectDetectionNode(DTROS):
         # Construct publisher
         self._pub_nn_output = rospy.Publisher(
             'NN_output',
-            String,
+            Bool,
             queue_size=1,
         )
 
@@ -84,20 +84,20 @@ class ObjectDetectionNode(DTROS):
         self.detection = self.det2bool(bboxes, classes, scores)
 
         # as soon as we get one detection we will stop forever
-        if self.detection:
-            self.log("Duckie detected")
-        else:
-            self.log("No duckie")
+        #if self.detection:
+        #    self.log("Duckie detected")
+        #else:
+        #    self.log("No duckie")
             
     def run(self):
-    	# publish message every 1 second (1 Hz)
+    	# publish message every 0.1 second (10 Hz)
         rate = rospy.Rate(10)
         while not self.initialized:
             pass
             
         while not rospy.is_shutdown():
-            rospy.loginfo("Publishing message: '%s'" % self.detection)
-            self._pub_nn_output.publish(str(self.detection))
+            #rospy.loginfo("Publishing message: '%s'" % self.detection)
+            self._pub_nn_output.publish(self.detection)
             rate.sleep()
 
 

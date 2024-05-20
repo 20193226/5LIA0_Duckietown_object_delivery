@@ -2,7 +2,7 @@
 
 import os
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import Twist2DStamped
 
@@ -12,11 +12,11 @@ class PathPlanningNode(DTROS):
         # initialize the DTROS parent class
         super(PathPlanningNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
         self.veh = rospy.get_namespace().strip("/")
-        self.duckiedata = 'False'
+        self.duckiedata = 0
         self.initialised = 0
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
-            String,
+            Bool,
             self.nn_cb,
             queue_size=1
         )
@@ -31,12 +31,12 @@ class PathPlanningNode(DTROS):
         
 
     def nn_cb(self, nn_output):
-        rospy.loginfo("Observation received '%s'", nn_output.data)
+        rospy.loginfo("Observation received '%d'", nn_output.data)
         self.initialised = 1
         self.duckiedata = nn_output.data
         
     def pub_car_commands(self):
-        # publish message every 1 second (1 Hz)
+        # publish message every 0.1 second (10 Hz)
         rate = rospy.Rate(10)
         self.log("not init")
         while not self.initialised:
@@ -44,14 +44,13 @@ class PathPlanningNode(DTROS):
         
         while not rospy.is_shutdown():
             car_control_msg = Twist2DStamped()
-            if self.duckiedata == 'False':
+            if self.duckiedata == False:
                 car_control_msg.v = 0.1
                 car_control_msg.omega = 0.0
-                self.log("duckieeee")
             else:
                 car_control_msg.v = 0.05
                 car_control_msg.omega = 1.0
-                self.log("F FF duckieee")
+
              # Actually publish the message
             self.pub_car_cmd.publish(car_control_msg)
             rate.sleep()
