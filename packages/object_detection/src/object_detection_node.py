@@ -84,9 +84,11 @@ class ObjectDetectionNode(DTROS):
 
         self.detection, id = self.det2bool(bboxes, classes, scores)
         
-        if id != -1:
-            dist, angle = depth_estimation(bboxes[id])
-            rospy.loginfo("duckie with r,theta: %.4f, %.4f",dist, angle)
+        for new_id in id:
+            if new_id == -1:
+                break
+            dist, angle = depth_estimation(bboxes[new_id])
+            rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
 
         # as soon as we get one detection we will stop forever
         #if self.detection:
@@ -115,9 +117,9 @@ class ObjectDetectionNode(DTROS):
         box_cla_sco_ids = set(list(sco_ids)).intersection(set(list(box_cla_ids)))
 
         if len(box_cla_sco_ids) > 0:
-            return True, next(iter(box_cla_sco_ids)) #list(box_cla_sco_ids).pop() #next(iter(box_cla_sco_ids))
+            return True, box_cla_sco_ids #list(box_cla_sco_ids).pop() #next(iter(box_cla_sco_ids))
         else:
-            return False, -1
+            return False, {-1}
 
 
 if __name__ == "__main__":
