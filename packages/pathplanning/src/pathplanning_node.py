@@ -31,7 +31,7 @@ class PathPlanningNode(DTROS):
         
 
     def nn_cb(self, nn_output):
-        rospy.loginfo("Observation received '%d'", nn_output.data)
+        # rospy.loginfo("Observation received '%d'", nn_output.data)
         self.initialised = 1
         self.duckiedata = nn_output.data
         
@@ -45,11 +45,11 @@ class PathPlanningNode(DTROS):
         while not rospy.is_shutdown():
             car_control_msg = Twist2DStamped()
             if self.duckiedata == False:
-                car_control_msg.v = 0.1
+                car_control_msg.v = 0.0
                 car_control_msg.omega = 0.0
             else:
-                car_control_msg.v = 0.05
-                car_control_msg.omega = 1.0
+                car_control_msg.v = 0.0
+                car_control_msg.omega = 0.0
 
              # Actually publish the message
             self.pub_car_cmd.publish(car_control_msg)

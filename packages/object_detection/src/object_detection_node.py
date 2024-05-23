@@ -17,7 +17,8 @@ from integration_activity import \
     NUMBER_FRAMES_SKIPPED, \
     filter_by_classes, \
     filter_by_bboxes, \
-    filter_by_scores
+    filter_by_scores, \
+    depth_estimation
 
 
 class ObjectDetectionNode(DTROS):
@@ -81,7 +82,11 @@ class ObjectDetectionNode(DTROS):
         rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
 
-        self.detection = self.det2bool(bboxes, classes, scores)
+        self.detection, id = self.det2bool(bboxes, classes, scores)
+        
+        if id != -1:
+            dist, angle = depth_estimation(bboxes[id])
+            rospy.loginfo("duckie with r,theta: %.4f, %.4f",dist, angle)
 
         # as soon as we get one detection we will stop forever
         #if self.detection:
@@ -110,9 +115,9 @@ class ObjectDetectionNode(DTROS):
         box_cla_sco_ids = set(list(sco_ids)).intersection(set(list(box_cla_ids)))
 
         if len(box_cla_sco_ids) > 0:
-            return True
+            return True, next(iter(box_cla_sco_ids)) #list(box_cla_sco_ids).pop() #next(iter(box_cla_sco_ids))
         else:
-            return False
+            return False, -1
 
 
 if __name__ == "__main__":
