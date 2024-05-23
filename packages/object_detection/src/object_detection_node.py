@@ -47,7 +47,9 @@ class ObjectDetectionNode(DTROS):
             buff_size=10000000,
             queue_size=1,
         )
-
+        self._window = "camera-reader"
+        cv2.namedWindow(self._window, cv2.WINDOW_AUTOSIZE)
+        
         self.bridge = CvBridge()
         self.v = rospy.get_param("~speed", 0.4)
         aido_eval = False
@@ -76,6 +78,9 @@ class ObjectDetectionNode(DTROS):
         except ValueError as e:
             self.logerr("Could not decode image: %s" % e)
             return
+        #show image
+        cv2.imshow(self._window, bgr)
+        cv2.waitKey(1)
 
         rgb = bgr[..., ::-1]
 
@@ -89,12 +94,6 @@ class ObjectDetectionNode(DTROS):
                 break
             dist, angle = depth_estimation(bboxes[new_id])
             rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
-
-        # as soon as we get one detection we will stop forever
-        #if self.detection:
-        #    self.log("Duckie detected")
-        #else:
-        #    self.log("No duckie")
             
     def run(self):
     	# publish message every 0.1 second (10 Hz)
