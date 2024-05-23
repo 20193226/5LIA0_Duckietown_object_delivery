@@ -49,7 +49,7 @@ class ObjectDetectionNode(DTROS):
         )
         self._window = "camera-reader"
         cv2.namedWindow(self._window, cv2.WINDOW_AUTOSIZE)
-        
+
         self.bridge = CvBridge()
         self.v = rospy.get_param("~speed", 0.4)
         aido_eval = False

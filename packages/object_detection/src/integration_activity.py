@@ -86,7 +86,7 @@ def depth_estimation(bbox: Tuple[int, int, int, int]):
     cam_ref_z = (DUCKIE_HEIGHT*FOCAL_Y)/(bbox[1]-bbox[3])
     bb_xcenter = (bbox[0]+bbox[2])/2
     #bb_ycenter = (bbox[1]+bbox[3])/2
-    ref_y = -cam_ref_z*(bb_xcenter-C_X)/FOCAL_X + BIAS_CAMERA
+    ref_y = -cam_ref_z*(bb_xcenter-C_X)/FOCAL_X #+ BIAS_CAMERA
     #ref_x = cam_ref_z*(bb_ycenter - C_Y)/FOCAL_Y
     #ref_y = -(cam_ref_z*(bb_xcenter-C_X)/FOCAL_X)
     #ref_x = -math.cos(-math.pi * PITCH / 180) * cam_ref_z + math.sin(-math.pi * PITCH / 180)*Z_CAM
