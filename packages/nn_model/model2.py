@@ -15,7 +15,7 @@ JETSON_FP16 = False
 
 def MODEL_NAME() -> str:
     # place the model name here
-    return "yolov5n"
+    return "best_fruit"
 
 def run(input, exception_on_failure=False):
     print(input)

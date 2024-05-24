@@ -34,13 +34,13 @@ def filter_by_classes(pred_class: int) -> bool:
     """
     Remember the class IDs:
 
-        | Object    | ID    |
-        | ---       | ---   |
-        | Duckie    | 0     |
-        | Cone      | 1     |
-        | Truck     | 2     |
-        | Bus       | 3     |
-
+        | Object       | ID    |
+        | ---          | ---   |
+        | apple        | 0     |
+        | banana       | 1     |
+        | grape        | 2     |
+        | orange       | 3     |
+        | strawberry   | 4     |
 
     Args:
         pred_class: the class of a prediction
