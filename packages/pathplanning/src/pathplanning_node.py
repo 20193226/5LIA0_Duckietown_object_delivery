@@ -16,7 +16,7 @@ class PathPlanningNode(DTROS):
         self.initialised = 0
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
-            Bool,
+            Float32MultiArray,
             self.nn_cb,
             queue_size=1
         )
@@ -34,6 +34,9 @@ class PathPlanningNode(DTROS):
         # rospy.loginfo("Observation received '%d'", nn_output.data)
         self.initialised = 1
         self.duckiedata = nn_output.data
+        for i in range(round(self.duckiedata[0])):
+            rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
+        
         
     def pub_car_commands(self):
         # publish message every 0.1 second (10 Hz)
