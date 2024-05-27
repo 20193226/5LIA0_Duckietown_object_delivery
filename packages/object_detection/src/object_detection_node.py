@@ -6,7 +6,7 @@ import rospy
 
 from duckietown.dtros import DTROS, NodeType, TopicType
 from duckietown_msgs.msg import Twist2DStamped
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float32MultiArray
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage
 
@@ -29,6 +29,12 @@ class ObjectDetectionNode(DTROS):
         self.initialized = False
         self.log("Initializing!")
         self.detection = 0
+        self.output_array = np.zeros(32)
+
+        cameramtx = np.array([[333.4101186407986, 0.0, 324.6950963207407],[0.0, 333.6774109483744, 224.5743511258171],[0.0, 0.0, 1.0]])
+        distortion = np.array([[-0.3181363905874839, 0.0788448253198741, -0.002692630926465555, -0.001866964989340619, 0.0  ]])
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cameramtx, distortion, (IMAGE_SIZE,IMAGE_SIZE), 1, (IMAGE_SIZE,IMAGE_SIZE))
+        self.mapx,self.mapy = cv2.initUndistortRectifyMap(cameramtx, distortion, None, newcameramtx,(IMAGE_SIZE, IMAGE_SIZE),5)
 
         self.veh = rospy.get_namespace().strip("/")
         
@@ -67,6 +73,7 @@ class ObjectDetectionNode(DTROS):
         if not self.initialized:
             return
             
+        self.output_array[0] = 0
         self.frame_id += 1
         self.frame_id = self.frame_id % (1 + NUMBER_FRAMES_SKIPPED())
         if self.frame_id != 0:
@@ -78,22 +85,31 @@ class ObjectDetectionNode(DTROS):
         except ValueError as e:
             self.logerr("Could not decode image: %s" % e)
             return
-        #show image
-        cv2.imshow(self._window, bgr)
-        cv2.waitKey(1)
 
         rgb = bgr[..., ::-1]
-
+        #rgb = cv2.remap(rgb, self.mapx, self.mapy, cv2.INTER_LINEAR)
         rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
 
         self.detection, id = self.det2bool(bboxes, classes, scores)
-        
+        i = 0
         for new_id in id:
             if new_id == -1:
                 break
+            self.output_array[0] = self.output_array[0] + 1
             dist, angle = depth_estimation(bboxes[new_id])
+            self.output_array[i*3+1] = dist
+            self.output_array[i*3+2] = angle
+            self.output_array[i*3+3] = new_id
+            i = i+1
             rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
+            rgb = cv2.rectangle(rgb, (int(bboxes[new_id][0]),int(bboxes[new_id][1])), (int(bboxes[new_id][2]),int(bboxes[new_id][3])), (255,0,0), 2) 
+            stuff_in_string = "r: %.2f, th: %.2f" % (dist, angle)
+            rgb = cv2.putText(rgb, stuff_in_string, (int(bboxes[new_id][0]-40),int(bboxes[new_id][1])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0),1,cv2.LINE_AA)
+
+        #show image
+        cv2.imshow(self._window, rgb)
+        cv2.waitKey(1)
             
     def run(self):
     	# publish message every 0.1 second (10 Hz)
@@ -103,6 +119,9 @@ class ObjectDetectionNode(DTROS):
             
         while not rospy.is_shutdown():
             #rospy.loginfo("Publishing message: '%s'" % self.detection)
+            #data_to_send = Float32MultiArray() 
+            #data_to_send.data = self.output_array
+            #self._pub_nn_output.publish(data_to_send)
             self._pub_nn_output.publish(self.detection)
             rate.sleep()
 
