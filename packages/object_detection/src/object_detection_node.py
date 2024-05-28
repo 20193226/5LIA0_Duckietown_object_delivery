@@ -79,21 +79,35 @@ class ObjectDetectionNode(DTROS):
             self.logerr("Could not decode image: %s" % e)
             return
         #show image
-        cv2.imshow(self._window, bgr)
-        cv2.waitKey(1)
+        
 
         rgb = bgr[..., ::-1]
 
         rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
 
+        if bboxes:
+            for i in range(len(bboxes)):
+                bbox= bboxes[i]
+                rospy.loginfo("bbox: %s", bbox)
+                left_x, top_y, right_x, bot_y = map(int, bbox) # leftmost x pixel, topmost y, rightmost x, bottommost y
+                rospy.loginfo("left_x, top_y, right_x, bot_y: %s", (left_x, top_y, right_x, bot_y))
+                label = classes[i]
+                score = scores[i]
+                cv2.rectangle(bgr, (left_x, top_y), (right_x, bot_y), (0, 255, 0), 2)
+                cv2.putText(bgr, f"{label} {score:.2f}", (left_x, top_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+                
+        cv2.imshow(self._window, bgr)
+        cv2.waitKey(1)
+        rospy.loginfo("bboxes: %s", bboxes)
         self.detection, id = self.det2bool(bboxes, classes, scores)
         
         for new_id in id:
             if new_id == -1:
                 break
             dist, angle = depth_estimation(bboxes[new_id])
-            rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
+            rospy.loginfo("Apple with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
             
     def run(self):
     	# publish message every 0.1 second (10 Hz)
