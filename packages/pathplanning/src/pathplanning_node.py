@@ -19,6 +19,8 @@ class PathPlanningNode(DTROS):
         self.duckiedata = np.zeros(1)
         self.initialised = 0
         self.statemachine = StateMachine()
+        self.obj_sequence = [0, 1, 2, 3, 4, 5]      # hardcoded sequence of objects ids to retrieve
+        self.current_obj_id = 0                     # object id to retrieve is self.obj_sequence[current_obj_id]
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
             Float32MultiArray,
@@ -45,21 +47,43 @@ class PathPlanningNode(DTROS):
 
     def pub_car_commands(self):
         rate = rospy.Rate(10)  # publish at 10 Hz
-        while not self.initialised:
+        while not self.initialised:     # leave this out? Like this, we only start scanning after finding an object...
             pass
 
         while not rospy.is_shutdown():
             car_control_msg = Twist2DStamped()
+
+            # State machine
             new_state = None
             if self.statemachine.state == State.SCANNING:
-                rospy.loginfo("SCANNING")
-                car_control_msg = scanning(car_control_msg)
-                if self.duckiedata[0] > 0:
-                    new_state = State.DETECTED_ANY
-                    rospy.loginfo("setting new state")
+                
+                #if self.duckiedata[0] > 0:
+                #    new_state = State.DETECTED_ANY
+                #    rospy.loginfo("setting new state")
+                while self.duckiedata[0] == 0:
+                    rospy.loginfo("SCANNING")
+                    car_control_msg = scanning(car_control_msg)
+                new_state = State.DETECTED_ANY
+                rospy.loginfo("setting new state")
+
             elif self.statemachine.state == State.DETECTED_ANY:
                 rospy.loginfo("DETECTED_ANY")
                 car_control_msg = detected_any(car_control_msg)
+
+            elif self.statemachine.state == State.IDENTIFIED:
+                pass
+
+            elif self.statemachine.state == State.CAPTURED:
+                pass
+
+            elif self.statemachine.state == State.DELIVERING:
+                pass
+
+            elif self.statemachine.state == State.DELIVERED:
+
+                self.current_obj_id += 1    # increment obj id to retrieve the next object
+
+            # State machine end
 
             # Publish the car command
             self.pub_car_cmd.publish(car_control_msg)

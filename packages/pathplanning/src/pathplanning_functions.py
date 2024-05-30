@@ -18,7 +18,7 @@ class StateMachine:
         self.state = new_state
 
 def scanning(car_control_msg):
-    car_control_msg.v = 0.2
+    car_control_msg.v = 0.1
     car_control_msg.omega = 0
     return car_control_msg
 
@@ -26,3 +26,6 @@ def detected_any(car_control_msg):
     car_control_msg.v = 0
     car_control_msg.omega = 0
     return car_control_msg
+
+def identified(car_control_msg):
+    pass
