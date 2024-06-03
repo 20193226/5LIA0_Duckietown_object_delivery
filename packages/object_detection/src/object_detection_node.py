@@ -29,7 +29,7 @@ class ObjectDetectionNode(DTROS):
         self.initialized = False
         self.log("Initializing!")
         self.detection = 0
-
+        self.output_array = np.zeros(32)
         self.veh = rospy.get_namespace().strip("/")
         
         # Construct publisher
@@ -85,30 +85,44 @@ class ObjectDetectionNode(DTROS):
 
         rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
-
-        if bboxes:
-            for i in range(len(bboxes)):
-                bbox= bboxes[i]
-                rospy.loginfo("bbox: %s", bbox)
-                left_x, top_y, right_x, bot_y = map(int, bbox) # leftmost x pixel, topmost y, rightmost x, bottommost y
-                rospy.loginfo("left_x, top_y, right_x, bot_y: %s", (left_x, top_y, right_x, bot_y))
-                label = classes[i]
-                score = scores[i]
-                cv2.rectangle(bgr, (left_x, top_y), (right_x, bot_y), (0, 255, 0), 2)
-                cv2.putText(bgr, f"{label} {score:.2f}", (left_x, top_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        
+        # Visualize the detections
+        # if bboxes:
+        #     for i in range(len(bboxes)):
+        #         bbox= bboxes[i]
+        #         left_x, bot_y, right_x, top_y = bbox # leftmost x pixel, topmost y, rightmost x, bottommost y
+        #         rospy.loginfo("left_x, bot_y, right_x, top_y: %s", (left_x, bot_y, right_x, top_y))
+        #         label = classes[i]
+        #         score = scores[i]
+        #         cv2.rectangle(bgr, (int(left_x), int(bot_y)), (int(right_x), int(top_y)), (0, 255, 0), 2)
+        #         cv2.putText(bgr, f"{label} {score:.2f}", (int(left_x), int(top_y) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
                 
-        cv2.imshow(self._window, bgr)
-        cv2.waitKey(1)
-        rospy.loginfo("bboxes: %s", bboxes)
+        # cv2.imshow(self._window, bgr)
+        # cv2.waitKey(1)
+        # rospy.loginfo("bboxes: %s", bboxes)
         self.detection, id = self.det2bool(bboxes, classes, scores)
         
+        i = 0
         for new_id in id:
+            rospy.loginfo("id: %s", id)
             if new_id == -1:
                 break
+            self.output_array[0] = self.output_array[0] + 1
             dist, angle = depth_estimation(bboxes[new_id])
-            rospy.loginfo("Apple with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
-            
+            self.output_array[i*3+1] = dist
+            self.output_array[i*3+2] = angle
+            self.output_array[i*3+3] = new_id
+            i = i+1
+            #rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
+            rgb = cv2.rectangle(rgb, (int(bboxes[new_id][0]),int(bboxes[new_id][1])), (int(bboxes[new_id][2]),int(bboxes[new_id][3])), (0,0,255), 2) 
+            stuff_in_string = "class: %.2f, score: %.2f" % (classes[new_id], scores[new_id])
+            rgb = cv2.putText(rgb, stuff_in_string, (int(bboxes[new_id][0]-40),int(bboxes[new_id][1])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0,0,255),1,cv2.LINE_AA)
+
+        #show image
+        cv2.imshow(self._window, rgb)
+        cv2.waitKey(1)
+
     def run(self):
     	# publish message every 0.1 second (10 Hz)
         rate = rospy.Rate(10)
