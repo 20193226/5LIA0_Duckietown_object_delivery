@@ -13,13 +13,15 @@ from sensor_msgs.msg import CompressedImage
 from nn_model.constants import IMAGE_SIZE
 from nn_model.model import Wrapper
 
+IMAGE_HEIGHT = 480
+IMAGE_WIDTH = 640
+
 from integration_activity import \
     NUMBER_FRAMES_SKIPPED, \
     filter_by_classes, \
     filter_by_bboxes, \
     filter_by_scores, \
     depth_estimation
-
 
 class ObjectDetectionNode(DTROS):
     def __init__(self, node_name):
@@ -33,8 +35,10 @@ class ObjectDetectionNode(DTROS):
 
         cameramtx = np.array([[333.4101186407986, 0.0, 324.6950963207407],[0.0, 333.6774109483744, 224.5743511258171],[0.0, 0.0, 1.0]])
         distortion = np.array([[-0.3181363905874839, 0.0788448253198741, -0.002692630926465555, -0.001866964989340619, 0.0  ]])
-        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cameramtx, distortion, (IMAGE_SIZE,IMAGE_SIZE), 0, (IMAGE_SIZE,IMAGE_SIZE))
-        self.mapx,self.mapy = cv2.initUndistortRectifyMap(cameramtx, distortion, None, newcameramtx,(IMAGE_SIZE, IMAGE_SIZE),5)
+        #newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cameramtx, distortion, (IMAGE_WIDTH,IMAGE_HEIGHT), 0, (IMAGE_WIDTH,IMAGE_HEIGHT))
+        #self.mapx,self.mapy = cv2.initUndistortRectifyMap(cameramtx, distortion, None, newcameramtx,(IMAGE_WIDTH, IMAGE_HEIGHT),5)
+        #rospy.loginfo(f"\n\n new cam mtx: {newcameramtx}\n\n")
+        self.mapx,self.mapy = cv2.initUndistortRectifyMap(cameramtx, distortion, None, cameramtx,(IMAGE_WIDTH, IMAGE_HEIGHT),5)
 
         self.veh = rospy.get_namespace().strip("/")
         
@@ -87,8 +91,10 @@ class ObjectDetectionNode(DTROS):
             return
 
         rgb = bgr[..., ::-1]
-        rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
-        #rgb = cv2.remap(rgb, self.mapx, self.mapy, cv2.INTER_LINEAR)
+        #height, width, channels = rgb.shape
+        #rospy.loginfo(f"\n\n img height, width, channels: {height}, {width}, {channels}\n\n")
+        #rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
+        rgb = cv2.remap(rgb, self.mapx, self.mapy, cv2.INTER_LINEAR)
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
 
         self.detection, id = self.det2bool(bboxes, classes, scores)
