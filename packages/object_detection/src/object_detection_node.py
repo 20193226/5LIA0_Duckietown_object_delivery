@@ -82,6 +82,7 @@ class ObjectDetectionNode(DTROS):
         
 
         rgb = bgr[..., ::-1]
+        # rgb = bgr
 
         rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
@@ -105,11 +106,11 @@ class ObjectDetectionNode(DTROS):
         
         i = 0
         for new_id in id:
-            rospy.loginfo("id: %s", id)
             if new_id == -1:
                 break
             self.output_array[0] = self.output_array[0] + 1
             dist, angle = depth_estimation(bboxes[new_id])
+            rospy.loginfo("class, dist, angle: %.2f, %.2f, %.2f", classes[new_id], dist, angle)
             self.output_array[i*3+1] = dist
             self.output_array[i*3+2] = angle
             self.output_array[i*3+3] = new_id
