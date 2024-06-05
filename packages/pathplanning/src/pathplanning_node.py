@@ -55,33 +55,21 @@ class PathPlanningNode(DTROS):
             car_control_msg = Twist2DStamped()
 
             # State machine
-            new_state = None
+            new_state = self.statemachine.state
 
             if self.statemachine.state == State.SCANNING:
                 
-                rospy.loginfo("SCANNING")
-                car_control_msg = scanning(car_control_msg) # do this before or after if?
-
-                if self.duckiedata[0] > 0:
-                    new_state = State.DETECTED_ANY
-                    rospy.loginfo("setting new state")
+                car_control_msg, new_state = scanning(car_control_msg, self.duckiedata)
 
             elif self.statemachine.state == State.DETECTED_ANY:
 
-                rospy.loginfo("DETECTED_ANY")
-                car_control_msg = detected_any(car_control_msg)
-
-                for i in range(round(self.duckiedata[0])):
-                    # compare ids of detected objects with desired object id:
-                    if self.duckiedata[i*3+3] == self.obj_sequence[self.current_obj_cnt]:
-                        self.idx_curr_obj = i
-                        new_state = State.IDENTIFIED
-                        rospy.loginfo("setting new state")
+                car_control_msg, new_state, self.idx_curr_obj = detected_any(car_control_msg, self.duckiedata,
+                                                                             self.obj_sequence, self.current_obj_cnt,
+                                                                             self.idx_curr_obj)
 
             elif self.statemachine.state == State.IDENTIFIED:
-                rospy.loginfo("IDENTIFIED")
-                car_control_msg = identified(car_control_msg)
-
+                
+                car_control_msg, new_state = identified(car_control_msg, new_state)
 
             elif self.statemachine.state == State.CAPTURED:
                 pass
@@ -100,7 +88,7 @@ class PathPlanningNode(DTROS):
             rate.sleep()
 
             # Transition to next state if applicable
-            if new_state is not None:
+            if new_state != self.statemachine.state:
                 self.statemachine.transition(new_state)
                 rospy.loginfo("switching state")
 
