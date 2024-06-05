@@ -14,7 +14,7 @@ class StateMachine:
     def __init__(self):
         self.state = State.SCANNING
 
-    def transition(self, new_state):
+    def transition(self, new_state: State):
         self.state = new_state
 
 def scanning(car_control_msg):
@@ -28,4 +28,13 @@ def detected_any(car_control_msg):
     return car_control_msg
 
 def identified(car_control_msg):
-    pass
+    return car_control_msg
+
+def captured(car_control_msg):
+    return car_control_msg
+
+def delivering(car_control_msg):
+    return car_control_msg
+
+def delivered(car_control_msg):
+    return car_control_msg

@@ -8,7 +8,7 @@ from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import Twist2DStamped
 
 from pathplanning_functions import State, StateMachine, \
-    scanning, detected_any, identified
+    scanning, detected_any, identified, captured, delivering, delivered
 
 class PathPlanningNode(DTROS):
 
@@ -21,6 +21,7 @@ class PathPlanningNode(DTROS):
         self.statemachine = StateMachine()
         self.obj_sequence = [0, 1, 2, 3, 4, 5]      # hardcoded sequence of objects ids to retrieve
         self.current_obj_cnt = 0                    # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
+        self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
             Float32MultiArray,
@@ -55,10 +56,11 @@ class PathPlanningNode(DTROS):
 
             # State machine
             new_state = None
+
             if self.statemachine.state == State.SCANNING:
                 
                 rospy.loginfo("SCANNING")
-                car_control_msg = scanning(car_control_msg) # do this before of after if?
+                car_control_msg = scanning(car_control_msg) # do this before or after if?
 
                 if self.duckiedata[0] > 0:
                     new_state = State.DETECTED_ANY
@@ -72,13 +74,14 @@ class PathPlanningNode(DTROS):
                 for i in range(round(self.duckiedata[0])):
                     # compare ids of detected objects with desired object id:
                     if self.duckiedata[i*3+3] == self.obj_sequence[self.current_obj_cnt]:
+                        self.idx_curr_obj = i
                         new_state = State.IDENTIFIED
                         rospy.loginfo("setting new state")
 
             elif self.statemachine.state == State.IDENTIFIED:
                 rospy.loginfo("IDENTIFIED")
                 car_control_msg = identified(car_control_msg)
-                
+
 
             elif self.statemachine.state == State.CAPTURED:
                 pass
