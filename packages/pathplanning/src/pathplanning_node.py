@@ -49,7 +49,7 @@ class PathPlanningNode(DTROS):
         
 
     def pub_car_commands(self):
-        pub_rate = 10               # publish at 10 Hz
+        pub_rate = 3               # publish at 3 Hz
         delta_t = 1/pub_rate
         rate = rospy.Rate(pub_rate)
         while not self.initialised:     # leave this out? Like this, we only start scanning after finding an object...
@@ -63,11 +63,11 @@ class PathPlanningNode(DTROS):
 
             if self.statemachine.state == State.SCANNING:
                 
-                car_control_msg, new_state = scanning(car_control_msg, self.duckiedata)
+                car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata)
 
             elif self.statemachine.state == State.DETECTED_ANY:
 
-                car_control_msg, new_state, self.idx_curr_obj = detected_any(car_control_msg, self.duckiedata,
+                car_control_msg, new_state, self.idx_curr_obj = detected_any(car_control_msg, new_state, self.duckiedata,
                                                                              self.obj_sequence, self.current_obj_cnt,
                                                                              self.idx_curr_obj)
 

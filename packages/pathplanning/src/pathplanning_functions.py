@@ -5,9 +5,9 @@ from enum import Enum, auto
 from typing import Tuple
 
 # Gains for heading PID control
-HEADING_KP = 15
-HEADING_KI = 1
-HEADING_KD = 0.2
+HEADING_KP = 3
+HEADING_KI = 0.01
+HEADING_KD = 0.1
 
 class State(Enum):
     SCANNING = auto()        # no objects found yet, driving forward until we do
@@ -25,10 +25,10 @@ class StateMachine:
         self.state = new_state
 
 
-def scanning(car_control_msg, duckiedata):
+def scanning(car_control_msg, new_state, duckiedata):
     # For now: going straight with constant speed until an object is detected
-    rospy.loginfo("SCANNING")
-    car_control_msg.v = 0.1
+    #rospy.loginfo("SCANNING")
+    car_control_msg.v = 0.05
     car_control_msg.omega = 0
 
     if duckiedata[0] > 0:
@@ -38,7 +38,7 @@ def scanning(car_control_msg, duckiedata):
     return car_control_msg, new_state
 
 
-def detected_any(car_control_msg, duckiedata, obj_sequence, current_obj_cnt, idx_curr_obj):
+def detected_any(car_control_msg, new_state, duckiedata, obj_sequence, current_obj_cnt, idx_curr_obj):
 
     rospy.loginfo("DETECTED_ANY")
     
@@ -67,16 +67,26 @@ def identified(car_control_msg, new_state, duckiedata, idx_curr_obj, prev_e, pre
     rospy.loginfo("IDENTIFIED")
     r = duckiedata[idx_curr_obj*3+1]
     theta = duckiedata[idx_curr_obj*3+2]
-    id = duckiedata[idx_curr_obj*3+3]
-    
-    v = 0.1
+    # id = duckiedata[idx_curr_obj*3+3]
+
     theta_r = 0
     gains = (HEADING_KP, HEADING_KI, HEADING_KD)
     # PID controller for heading
+    v = 0
     v, omega, e, e_int = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
-    car_control_msg.v = v
-    car_control_msg.omega = omega
+    rospy.loginfo("PID values: v, omega, e, e_int: %.4f, %.4f, %.4f", omega, e, e_int)
+    
+    if r > 0.3:
+        car_control_msg.v = 0.05
+        car_control_msg.omega = omega
+    elif r > 0.15:
+        car_control_msg.v = 0.03
+        car_control_msg.omega = omega
+    else:
+        car_control_msg.v = 0
+        car_control_msg.omega = omega
 
+    # once within a certain distance, move forward a bit more, then change to captured state
     return car_control_msg, new_state, e, e_int
 
 
@@ -128,7 +138,7 @@ def PIDController(v_0: float,
     e_int = prev_int + e*delta_t
 
     # anti-windup - preventing the integral error from growing too much
-    e_int = max(min(e_int,2),-2)
+    e_int = max(min(e_int, 0.5), -0.5)
 
     # derivative of the error
     e_der = (e - prev_e)/delta_t
