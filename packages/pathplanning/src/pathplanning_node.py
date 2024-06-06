@@ -22,6 +22,8 @@ class PathPlanningNode(DTROS):
         self.obj_sequence = [0, 1, 2, 3, 4, 5]      # hardcoded sequence of objects ids to retrieve
         self.current_obj_cnt = 0                    # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
         self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
+        self.prev_e = 0                             # previous tracking error (for PID control)
+        self.prev_int = 0                           # previous integral error term (for PID control)
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
             Float32MultiArray,
@@ -47,7 +49,9 @@ class PathPlanningNode(DTROS):
         
 
     def pub_car_commands(self):
-        rate = rospy.Rate(10)  # publish at 10 Hz
+        pub_rate = 10               # publish at 10 Hz
+        delta_t = 1/pub_rate
+        rate = rospy.Rate(pub_rate)
         while not self.initialised:     # leave this out? Like this, we only start scanning after finding an object...
             pass
 
@@ -69,10 +73,14 @@ class PathPlanningNode(DTROS):
 
             elif self.statemachine.state == State.IDENTIFIED:
                 
-                car_control_msg, new_state = identified(car_control_msg, new_state)
+                car_control_msg, new_state, e, e_int = identified(car_control_msg, new_state, self.duckiedata,
+                                                        self.idx_curr_obj, self.prev_e, self.prev_int, delta_t)
+                self.prev_e = e
+                self.prev_int = e_int
 
             elif self.statemachine.state == State.CAPTURED:
-                pass
+                
+                car_control_msg, new_state = captured(car_control_msg, new_state)
 
             elif self.statemachine.state == State.DELIVERING:
                 pass
@@ -80,6 +88,8 @@ class PathPlanningNode(DTROS):
             elif self.statemachine.state == State.DELIVERED:
 
                 self.current_obj_cnt += 1    # increment obj id to retrieve the next object
+                self.prev_e = 0              # reset PID errors
+                self.prev_int = 0            # reset PID errors
 
             # State machine end
 

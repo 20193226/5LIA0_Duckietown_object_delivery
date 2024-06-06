@@ -4,9 +4,10 @@ import rospy
 from enum import Enum, auto
 from typing import Tuple
 
-KP = 15
-KI = 1
-KD = 0.2
+# Gains for heading PID control
+HEADING_KP = 15
+HEADING_KI = 1
+HEADING_KD = 0.2
 
 class State(Enum):
     SCANNING = auto()        # no objects found yet, driving forward until we do
@@ -32,7 +33,7 @@ def scanning(car_control_msg, duckiedata):
 
     if duckiedata[0] > 0:
         new_state = State.DETECTED_ANY
-        rospy.loginfo("setting new state")
+        rospy.loginfo("setting new state detected any")
 
     return car_control_msg, new_state
 
@@ -46,28 +47,45 @@ def detected_any(car_control_msg, duckiedata, obj_sequence, current_obj_cnt, idx
         if duckiedata[i*3+3] == obj_sequence[current_obj_cnt]:
             idx_curr_obj = i
             new_state = State.IDENTIFIED
-            rospy.loginfo("setting new state")
+            rospy.loginfo("setting new state identified")
 
     if new_state != State.IDENTIFIED:
         # if not found, look around to find desired object (just stop for now)
-        car_control_msg.v = 0
-        car_control_msg.omega = 0
+        pass
+        # car_control_msg.v = 0
+        # car_control_msg.omega = 0
     else:
-        car_control_msg.v = 0
-        car_control_msg.omega = 0
+        pass
+        # car_control_msg.v = 0
+        # car_control_msg.omega = 0
     
     return car_control_msg, new_state, idx_curr_obj
 
 
-def identified(car_control_msg, new_state):
+def identified(car_control_msg, new_state, duckiedata, idx_curr_obj, prev_e, prev_int, delta_t):
 
     rospy.loginfo("IDENTIFIED")
-    # PID controller for heading
+    r = duckiedata[idx_curr_obj*3+1]
+    theta = duckiedata[idx_curr_obj*3+2]
+    id = duckiedata[idx_curr_obj*3+3]
     
-    return car_control_msg, new_state
+    v = 0.1
+    theta_r = 0
+    gains = (HEADING_KP, HEADING_KI, HEADING_KD)
+    # PID controller for heading
+    v, omega, e, e_int = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
+    car_control_msg.v = v
+    car_control_msg.omega = omega
+
+    return car_control_msg, new_state, e, e_int
 
 
 def captured(car_control_msg, new_state):
+
+    rospy.loginfo("CAPTURED")
+    # just stop for now
+    car_control_msg.v = 0
+    car_control_msg.omega = 0
     return car_control_msg, new_state
 
 
@@ -77,6 +95,7 @@ def delivering(car_control_msg, new_state):
 
 def delivered(car_control_msg, new_state):
     return car_control_msg, new_state
+
 
 def PIDController(v_0: float,
                   theta_ref: float,
