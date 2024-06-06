@@ -41,6 +41,10 @@ def filter_by_classes(pred_class: int) -> bool:
         | orange       | 2     |
         | pear         | 3     |
         | strawberry   | 4     |
+        | duckie       | 5     |
+        | cone         | 6     |
+        | truck        | 7     |
+        | bus          | 8     |
 
     Args:
         pred_class: the class of a prediction
