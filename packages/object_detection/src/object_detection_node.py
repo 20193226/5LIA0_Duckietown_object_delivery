@@ -116,6 +116,13 @@ class ObjectDetectionNode(DTROS):
         #show image
         cv2.imshow(self._window, rgb)
         cv2.waitKey(1)
+        data_to_send = Float32MultiArray() 
+        data_to_send.data = self.output_array
+        for i in range(round(data_to_send.data[0])):
+            rospy.loginfo("OUTPUT duck with r,theta, id: %.4f, %.4f, %d",data_to_send.data[i*3+1], data_to_send.data[i*3+2], round(data_to_send.data[i*3+3]))
+        self._pub_nn_output.publish(data_to_send)
+        #self._pub_nn_output.publish(self.detection)
+        #rate.sleep()
             
     def run(self):
     	# publish message every 0.1 second (10 Hz)
@@ -126,7 +133,10 @@ class ObjectDetectionNode(DTROS):
         while not rospy.is_shutdown():
             #rospy.loginfo("Publishing message: '%s'" % self.detection)
             data_to_send = Float32MultiArray() 
+            
             data_to_send.data = self.output_array
+            for i in range(round(data_to_send.data[0])):
+                rospy.loginfo("OUTPUT duck with r,theta, id: %.4f, %.4f, %d",data_to_send.data[i*3+1], data_to_send.data[i*3+2], round(data_to_send.data[i*3+3]))
             self._pub_nn_output.publish(data_to_send)
             #self._pub_nn_output.publish(self.detection)
             rate.sleep()
@@ -150,5 +160,5 @@ if __name__ == "__main__":
     # Initialize the node
     object_detection_node = ObjectDetectionNode(node_name="object_detection_node")
     # Keep it spinning
-    object_detection_node.run()
+    #object_detection_node.run()
     rospy.spin()
