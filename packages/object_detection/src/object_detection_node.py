@@ -118,7 +118,7 @@ class ObjectDetectionNode(DTROS):
             if new_id == -1:
                 break
             self.output_array[0] = self.output_array[0] + 1
-            self.output_array[0] = self.output_array[0] + 1
+            # self.output_array[0] = self.output_array[0] + 1
             dist, angle = depth_estimation(bboxes[new_id])
             self.output_array[i*3+1] = dist
             self.output_array[i*3+2] = angle
