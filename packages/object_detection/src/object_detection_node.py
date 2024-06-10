@@ -96,12 +96,28 @@ class ObjectDetectionNode(DTROS):
         #rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
         rgb = cv2.remap(rgb, self.mapx, self.mapy, cv2.INTER_LINEAR)
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
+        
+        # Visualize the detections
+        # if bboxes:
+        #     for i in range(len(bboxes)):
+        #         bbox= bboxes[i]
+        #         left_x, bot_y, right_x, top_y = bbox # leftmost x pixel, topmost y, rightmost x, bottommost y
+        #         rospy.loginfo("left_x, bot_y, right_x, top_y: %s", (left_x, bot_y, right_x, top_y))
+        #         label = classes[i]
+        #         score = scores[i]
+        #         cv2.rectangle(bgr, (int(left_x), int(bot_y)), (int(right_x), int(top_y)), (0, 255, 0), 2)
+        #         cv2.putText(bgr, f"{label} {score:.2f}", (int(left_x), int(top_y) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
+                
+        # cv2.imshow(self._window, bgr)
+        # cv2.waitKey(1)
+        # rospy.loginfo("bboxes: %s", bboxes)
         self.detection, id = self.det2bool(bboxes, classes, scores)
         i = 0
         for new_id in id:
             if new_id == -1:
                 break
+            self.output_array[0] = self.output_array[0] + 1
             self.output_array[0] = self.output_array[0] + 1
             dist, angle = depth_estimation(bboxes[new_id])
             self.output_array[i*3+1] = dist

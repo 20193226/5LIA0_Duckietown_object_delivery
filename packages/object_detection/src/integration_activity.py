@@ -34,13 +34,17 @@ def filter_by_classes(pred_class: int) -> bool:
     """
     Remember the class IDs:
 
-        | Object    | ID    |
-        | ---       | ---   |
-        | Duckie    | 0     |
-        | Cone      | 1     |
-        | Truck     | 2     |
-        | Bus       | 3     |
-
+        | Object       | ID    |
+        | ---          | ---   |
+        | apple        | 0     |
+        | lemon        | 1     |
+        | orange       | 2     |
+        | pear         | 3     |
+        | strawberry   | 4     |
+        | duckie       | 5     |
+        | cone         | 6     |
+        | truck        | 7     |
+        | bus          | 8     |
 
     Args:
         pred_class: the class of a prediction
@@ -48,11 +52,12 @@ def filter_by_classes(pred_class: int) -> bool:
     # Right now, this returns True for every object's class
     # TODO: Change this to only return True for duckies!
     # In other words, returning False means that this prediction is ignored.
-    if pred_class == 0:
-        return True
-    else:  
-        return False
 
+    # if pred_class == 0:
+    #     return True
+    # else:  
+    #     return False
+    return pred_class == 1 or pred_class == 2 or pred_class == 5
 
 def filter_by_scores(score: float) -> bool:
     """
@@ -62,7 +67,7 @@ def filter_by_scores(score: float) -> bool:
     # Right now, this returns True for every object's confidence
     # TODO: Change this to filter the scores, or not at all
     # (returning True for all of them might be the right thing to do!)
-    if score >= 0.30:
+    if score >= 0.60:
         return True
     else:
         return False
