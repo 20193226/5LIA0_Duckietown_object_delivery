@@ -19,7 +19,7 @@ class PathPlanningNode(DTROS):
         self.duckiedata = np.zeros(1)
         self.initialised = 0
         self.statemachine = StateMachine()
-        self.obj_sequence = [0, 1, 2, 3, 4, 5]      # hardcoded sequence of objects ids to retrieve
+        self.obj_sequence = [5, 1, 2]               # hardcoded sequence of objects ids to retrieve (duckie, lemon, orange)
         self.current_obj_cnt = 0                    # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
         self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                             # previous tracking error (for PID control)
@@ -87,7 +87,8 @@ class PathPlanningNode(DTROS):
 
             elif self.statemachine.state == State.DELIVERED:
 
-                self.current_obj_cnt += 1    # increment obj id to retrieve the next object
+                if self.current_obj_cnt < len(self.obj_sequence):
+                    self.current_obj_cnt += 1    # increment obj id to retrieve the next object
                 self.prev_e = 0              # reset PID errors
                 self.prev_int = 0            # reset PID errors
 

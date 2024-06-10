@@ -20,7 +20,7 @@ source /code/solution/devel/setup.bash --extend
 dt-exec echo "launching node" 
 #dt-exec roslaunch --wait agent agent_node.launch &
 #dt-exec roslaunch --wait car_interface all.launch veh:=$VEHICLE_NAME &
-# dt-exec roslaunch --wait pathplanning pathplanning_node.launch &
+dt-exec roslaunch --wait pathplanning pathplanning_node.launch &
 dt-exec roslaunch --wait object_detection object_detection_node.launch veh:=$VEHICLE_NAME
 
 # ----------------------------------------------------------------------------
