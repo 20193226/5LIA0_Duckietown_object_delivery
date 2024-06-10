@@ -19,7 +19,7 @@ class PathPlanningNode(DTROS):
         self.duckiedata = np.zeros(1)
         self.initialised = 0
         self.statemachine = StateMachine()
-        self.obj_sequence = [5, 1, 2]               # hardcoded sequence of objects ids to retrieve (duckie, lemon, orange)
+        self.obj_sequence = [0, 0, 0]   #[5, 1, 2]  # hardcoded sequence of objects ids to retrieve (duckie, lemon, orange)
         self.current_obj_cnt = 0                    # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
         self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                             # previous tracking error (for PID control)
@@ -67,14 +67,14 @@ class PathPlanningNode(DTROS):
 
             elif self.statemachine.state == State.DETECTED_ANY:
 
-                car_control_msg, new_state, self.idx_curr_obj = detected_any(car_control_msg, new_state, self.duckiedata,
-                                                                             self.obj_sequence, self.current_obj_cnt,
-                                                                             self.idx_curr_obj)
+                car_control_msg, new_state = detected_any(car_control_msg, new_state, self.duckiedata,
+                                                                             self.obj_sequence[self.current_obj_cnt])
 
             elif self.statemachine.state == State.IDENTIFIED:
                 
                 car_control_msg, new_state, e, e_int = identified(car_control_msg, new_state, self.duckiedata,
-                                                        self.idx_curr_obj, self.prev_e, self.prev_int, delta_t)
+                                                        self.obj_sequence[self.current_obj_cnt],
+                                                        self.prev_e, self.prev_int, delta_t)
                 self.prev_e = e
                 self.prev_int = e_int
 

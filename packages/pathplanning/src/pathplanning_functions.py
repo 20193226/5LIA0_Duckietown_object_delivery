@@ -38,14 +38,13 @@ def scanning(car_control_msg, new_state, duckiedata):
     return car_control_msg, new_state
 
 
-def detected_any(car_control_msg, new_state, duckiedata, obj_sequence, current_obj_cnt, idx_curr_obj):
+def detected_any(car_control_msg, new_state, duckiedata, current_obj):
 
     rospy.loginfo("DETECTED_ANY")
     
     for i in range(round(duckiedata[0])):
         # compare ids of detected objects with desired object id:
-        if duckiedata[i*3+3] == obj_sequence[current_obj_cnt]:
-            idx_curr_obj = i
+        if duckiedata[i*3+3] == current_obj:
             new_state = State.IDENTIFIED
             rospy.loginfo("setting new state identified")
 
@@ -59,32 +58,47 @@ def detected_any(car_control_msg, new_state, duckiedata, obj_sequence, current_o
         # car_control_msg.v = 0
         # car_control_msg.omega = 0
     
-    return car_control_msg, new_state, idx_curr_obj
+    return car_control_msg, new_state
 
 
-def identified(car_control_msg, new_state, duckiedata, idx_curr_obj, prev_e, prev_int, delta_t):
+def identified(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t):
 
     rospy.loginfo("IDENTIFIED")
-    r = duckiedata[idx_curr_obj*3+1]
-    theta = duckiedata[idx_curr_obj*3+2]
-    # id = duckiedata[idx_curr_obj*3+3]
+    i = 0
+    e = prev_e
+    e_int = prev_int
+    for i in range(round(duckiedata[0])):
+        # compare ids of detected objects with desired object id:
+        if duckiedata[i*3+3] == current_obj:
 
-    theta_r = 0
-    gains = (HEADING_KP, HEADING_KI, HEADING_KD)
-    # PID controller for heading
-    v = 0
-    v, omega, e, e_int = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
-    rospy.loginfo("PID values: v, omega, e, e_int: %.4f, %.4f, %.4f", omega, e, e_int)
+            r = duckiedata[i*3+1]
+            theta = duckiedata[i*3+2]
+
+            theta_r = 0     # desired heading: angle zero, i.e. object straight ahead
+            gains = (HEADING_KP, HEADING_KI, HEADING_KD)
+            # PID controller for heading
+            v = 0
+            v, omega, e, e_int = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
+            rospy.loginfo("PID values: omega, e, e_int: %.4f, %.4f, %.4f", omega, e, e_int)
+            
+            if r > 0.3:
+                rospy.loginfo("r>0.3")
+                car_control_msg.v = 0.05
+                car_control_msg.omega = omega
+            elif r<=0.3 and r > 0.15:
+                rospy.loginfo("r>0.15")
+                car_control_msg.v = 0.03
+                car_control_msg.omega = omega
+            else:
+                rospy.loginfo("r<=0.15")
+                car_control_msg.v = 0
+                car_control_msg.omega = omega
     
-    if r > 0.3:
-        car_control_msg.v = 0.05
-        car_control_msg.omega = omega
-    elif r > 0.15:
-        car_control_msg.v = 0.03
-        car_control_msg.omega = omega
-    else:
+    # desired object not found or no objects found
+    if i == range(round(duckiedata[0])):
         car_control_msg.v = 0
-        car_control_msg.omega = omega
+        car_control_msg.omega = 0
+        # maybe use car_control_msg from previous iteration?
 
     # once within a certain distance, move forward a bit more, then change to captured state
     return car_control_msg, new_state, e, e_int
