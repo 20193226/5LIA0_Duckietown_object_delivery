@@ -24,6 +24,8 @@ class PathPlanningNode(DTROS):
         self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                             # previous tracking error (for PID control)
         self.prev_int = 0                           # previous integral error term (for PID control)
+        self.direction = 0                          # keep track in which direction the bot should turn when looking for objects (0: initial, 1: left, 2: right)
+        self.count = 0                              # count how many times in a row during approach an object has not been detected
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
             Float32MultiArray,
@@ -49,7 +51,7 @@ class PathPlanningNode(DTROS):
         
 
     def pub_car_commands(self):
-        pub_rate = 3               # publish at 3 Hz
+        pub_rate = 10               # publish at 10 Hz
         delta_t = 1/pub_rate
         rate = rospy.Rate(pub_rate)
         while not self.initialised:     # leave this out? Like this, we only start scanning after finding an object...
@@ -59,7 +61,7 @@ class PathPlanningNode(DTROS):
             car_control_msg = Twist2DStamped()
 
             # State machine
-            new_state = self.statemachine.state
+            new_state = None
 
             if self.statemachine.state == State.SCANNING:
                 
@@ -67,16 +69,18 @@ class PathPlanningNode(DTROS):
 
             elif self.statemachine.state == State.DETECTED_ANY:
 
-                car_control_msg, new_state = detected_any(car_control_msg, new_state, self.duckiedata,
-                                                                             self.obj_sequence[self.current_obj_cnt])
+                car_control_msg, new_state, direction = detected_any(car_control_msg, new_state, self.duckiedata,
+                                                                             self.obj_sequence[self.current_obj_cnt], self.direction)
+                self.direction = direction
 
             elif self.statemachine.state == State.IDENTIFIED:
                 
-                car_control_msg, new_state, e, e_int = identified(car_control_msg, new_state, self.duckiedata,
+                car_control_msg, new_state, e, e_int, count = identified(car_control_msg, new_state, self.duckiedata,
                                                         self.obj_sequence[self.current_obj_cnt],
-                                                        self.prev_e, self.prev_int, delta_t)
+                                                        self.prev_e, self.prev_int, delta_t, self.count)
                 self.prev_e = e
                 self.prev_int = e_int
+                self.count = count
 
             elif self.statemachine.state == State.CAPTURED:
                 
@@ -96,13 +100,13 @@ class PathPlanningNode(DTROS):
 
             # Publish the car command
             self.pub_car_cmd.publish(car_control_msg)
-            rate.sleep()
 
             # Transition to next state if applicable
-            if new_state != self.statemachine.state:
+            if new_state != None:
                 self.statemachine.transition(new_state)
                 rospy.loginfo("switching state")
 
+            rate.sleep()
 
     def on_shutdown(self):
         stop_msg = Twist2DStamped()
