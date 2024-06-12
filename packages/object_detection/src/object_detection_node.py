@@ -50,20 +50,31 @@ class ObjectDetectionNode(DTROS):
         self._window = "camera-reader"
         cv2.namedWindow(self._window, cv2.WINDOW_AUTOSIZE)
 
+        self.get_run_status = rospy.Subscriber("run_status", String, self.run_status_cb, queue_size=1)
+
+        self.model_type = "fruit"
         self.bridge = CvBridge()
         self.v = rospy.get_param("~speed", 0.4)
         aido_eval = False
         self.log(f"AIDO EVAL VAR: {aido_eval}")
         self.log("Starting model loading!")
         self._debug = rospy.get_param("~debug", False)
-        self.model_wrapper = Wrapper()
+        
         self.log("Finished model loading!")
         self.frame_id = 0
         self.first_image_received = False
         self.initialized = True
         self.log("Initialized!")
 
+    def run_status_cb(self, msg):
+        if msg.data == "capture":
+            self.model_type = "fruit"
+        else:
+            self.model_type = "duckie"
+
+
     def image_cb(self, image_msg):
+        self.model_wrapper = Wrapper(self.model_type)
         if not self.initialized:
             return
             
