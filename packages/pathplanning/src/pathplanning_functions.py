@@ -129,9 +129,9 @@ def identified(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev
 def captured(car_control_msg, new_state):
 
     rospy.loginfo("CAPTURED")
-    # just stop for now
-    car_control_msg.v = 0.02
-    car_control_msg.omega = 0.1
+    # just stop for now. should rotate around 180° until destination object is detected
+    car_control_msg.v = 0
+    car_control_msg.omega = 0
     return car_control_msg, new_state
 
 
