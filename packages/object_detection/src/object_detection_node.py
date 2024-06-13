@@ -57,6 +57,10 @@ class ObjectDetectionNode(DTROS):
             buff_size=10000000,
             queue_size=1,
         )
+
+        self.get_run_status = rospy.Subscriber("run_status", String, self.run_status_cb, queue_size=1)
+
+        self.model_type = "fruit"
         self._window = "camera-reader"
         cv2.namedWindow(self._window, cv2.WINDOW_AUTOSIZE)
 
@@ -73,7 +77,14 @@ class ObjectDetectionNode(DTROS):
         self.initialized = True
         self.log("Initialized!")
 
+    def run_status_cb(self, msg):
+        if msg.data == "capture":
+            self.model_type = "fruit"
+        else:
+            self.model_type = "duckie"
+
     def image_cb(self, image_msg):
+        self.model_wrapper = Wrapper(self.model_type)
         if not self.initialized:
             return
             
