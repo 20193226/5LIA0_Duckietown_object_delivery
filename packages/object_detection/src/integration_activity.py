@@ -57,7 +57,7 @@ def filter_by_classes(pred_class: int) -> bool:
     #     return True
     # else:  
     #     return False
-    return pred_class == 1 or pred_class == 2 or pred_class == 5
+    return True
 
 def filter_by_scores(score: float) -> bool:
     """
@@ -67,7 +67,7 @@ def filter_by_scores(score: float) -> bool:
     # Right now, this returns True for every object's confidence
     # TODO: Change this to filter the scores, or not at all
     # (returning True for all of them might be the right thing to do!)
-    if score >= 0.60:
+    if score >= 0.30:
         return True
     else:
         return False
