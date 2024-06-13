@@ -10,8 +10,8 @@ HEADING_KI = 0.05
 HEADING_KD = 0.028
 
 class State(Enum):
-    SCANNING = auto()        # no objects found yet, driving forward until we do
-    DETECTED_ANY = auto()    # an object is found, looking for the desired one, rotate around until desired object is identified
+    SCANNING = auto()        # scanning for objects
+    # DETECTED_ANY = auto()  # an object is found, looking for the desired one, rotate around until desired object is identified
     IDENTIFIED = auto()      # desired object identified, drive towards it
     CAPTURED = auto()        # desired object captured within the "grabber"
     DELIVERING = auto()      # desired object is being delivered
@@ -25,58 +25,59 @@ class StateMachine:
         self.state = new_state
 
 
-def scanning(car_control_msg, new_state, duckiedata):
-    # For now: going straight with constant speed until an object is detected
-    #rospy.loginfo("SCANNING")
-    car_control_msg.v = 0.04
-    car_control_msg.omega = 0
+def scanning(car_control_msg, new_state, duckiedata, current_obj, v):
+    # Turning until desired object is detected
+    # rospy.loginfo("SCANNING")
+    car_control_msg.v = 0
+    car_control_msg.omega = v
 
-    if duckiedata[0] > 0:
-        new_state = State.DETECTED_ANY
-        car_control_msg.v = 0
-        car_control_msg.omega = 0
-        rospy.loginfo("setting new state detected any")
+    for i in range(round(duckiedata[0])):
+    # compare ids of detected objects with desired object id:
+        if duckiedata[i*3+3] == current_obj:
+            new_state = State.IDENTIFIED
+            car_control_msg.v = 0
+            car_control_msg.omega = 0
+            rospy.loginfo("desired object found")
 
     return car_control_msg, new_state
 
 
-def detected_any(car_control_msg, new_state, duckiedata, current_obj, direction):
+# def detected_any(car_control_msg, new_state, duckiedata, current_obj, direction):
 
-    rospy.loginfo("DETECTED_ANY")
+#     rospy.loginfo("DETECTED_ANY")
     
-    for i in range(round(duckiedata[0])):
-        # compare ids of detected objects with desired object id:
-        if duckiedata[i*3+3] == current_obj:
-            new_state = State.IDENTIFIED
-            rospy.loginfo("setting new state identified")
+#     for i in range(round(duckiedata[0])):
+#         # compare ids of detected objects with desired object id:
+#         if duckiedata[i*3+3] == current_obj:
+#             new_state = State.IDENTIFIED
+#             rospy.loginfo("setting new state identified")
 
-    if new_state == State.IDENTIFIED:
-        # if found, stop
-        car_control_msg.v = 0
-        car_control_msg.omega = 0
-        direction = 0
-    else:
-        # if not found, look around
-        if direction == 0:
-            car_control_msg.v = 0
-            car_control_msg.omega = 0.05
-            direction = 1
-        elif direction == 1:
-            car_control_msg.v = 0
-            car_control_msg.omega = -0.1
-            direction = 2
-        else:
-            car_control_msg.v = 0
-            car_control_msg.omega = 0.1
-            direction = 1
+#     if new_state == State.IDENTIFIED:
+#         # if found, stop
+#         car_control_msg.v = 0
+#         car_control_msg.omega = 0
+#         direction = 0
+#     else:
+#         # if not found, look around
+#         if direction == 0:
+#             car_control_msg.v = 0
+#             car_control_msg.omega = 0.05
+#             direction = 1
+#         elif direction == 1:
+#             car_control_msg.v = 0
+#             car_control_msg.omega = -0.1
+#             direction = 2
+#         else:
+#             car_control_msg.v = 0
+#             car_control_msg.omega = 0.1
+#             direction = 1
 
     
-    return car_control_msg, new_state, direction
+#     return car_control_msg, new_state, direction
 
 
-def identified(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t, count):
+def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t, no_det_count):
 
-    rospy.loginfo("IDENTIFIED")
     i = 0
     e = prev_e
     e_int = prev_int
@@ -86,7 +87,7 @@ def identified(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev
         if duckiedata[i*3+3] == current_obj:
 
             obj_ids.append(current_obj)
-            count = 0
+            no_det_count = 0       # reset 'not detected' counter because we have detected the desired object
             r = duckiedata[i*3+1]
             theta = duckiedata[i*3+2]
 
@@ -97,11 +98,11 @@ def identified(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev
             v, omega, e, e_int, e_der = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
             rospy.loginfo("PID values: omega, e, e_int, e_der: %.4f, %.4f, %.4f, %.4f", omega, e, e_int, e_der)
             
-            if r > 0.28:
+            if r > 0.15: # r > 0.28:
                 rospy.loginfo("r>0.3")
                 car_control_msg.v = 0.02
                 car_control_msg.omega = omega
-            elif r <= 0.28 and r > 0.15:
+            elif r <= 0.15 and r > 0.07: # r <= 0.28 and r > 0.15:
                 rospy.loginfo("r>0.15")
                 car_control_msg.v = 0.01
                 car_control_msg.omega = omega
@@ -111,35 +112,56 @@ def identified(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev
                 car_control_msg.omega = omega
                 new_state = State.CAPTURED
     
-    # desired object not found:
+    # desired object not found, stop. If not found for a couple of iterations, go back to scanning
     if current_obj not in obj_ids:
-        count += 1
+        no_det_count += 1
         car_control_msg.v = 0
         car_control_msg.omega = 0
         rospy.loginfo("Identified: object not found")
-        if count >= 2:
-            new_state = State.DETECTED_ANY
-            rospy.loginfo("Identified: object not found, switch to detected_any")
+        if no_det_count >= 4:
+            new_state = State.SCANNING
+            rospy.loginfo("Identified: object not found, switch to scanning")
     
 
     # once within a certain distance, move forward a bit more, then change to captured state
-    return car_control_msg, new_state, e, e_int, count
+    return car_control_msg, new_state, e, e_int, no_det_count
 
 
-def captured(car_control_msg, new_state):
+# def captured(car_control_msg, new_state, duckiedata, approach_count, dest_obj):
 
-    rospy.loginfo("CAPTURED")
-    # just stop for now. should rotate around 180° until destination object is detected
-    car_control_msg.v = 0
-    car_control_msg.omega = 0
-    return car_control_msg, new_state
+#     rospy.loginfo("CAPTURED")
+#     # just stop for now. should rotate around 180° until destination object is detected
+#     car_control_msg.v = 0
+#     car_control_msg.omega = 0
+
+#     if approach_count <= 5:
+#         # If not close enough yet, go straight
+#         approach_count += 1
+#         car_control_msg.v = 0.02
+#         car_control_msg.omega = 0
+#     else:
+#         car_control_msg, new_state = scanning(car_control_msg, new_state, duckiedata, dest_obj)
+
+#         if new_state == State.IDENTIFIED:
+#             new_state = State.DELIVERING
+
+#     return car_control_msg, new_state, approach_count
 
 
-def delivering(car_control_msg, new_state):
-    return car_control_msg, new_state
+# def delivering(car_control_msg, new_state, duckiedata, dest_obj, prev_e, prev_int, delta_t, no_det_count):
+    
+    
+#     car_control_msg, new_state, e, e_int, no_det_count = approach(car_control_msg, new_state, duckiedata,
+#                                                                   dest_obj, prev_e, prev_int, delta_t, no_det_count)
+
+#     return car_control_msg, new_state, e, e_int, no_det_count
 
 
 def delivered(car_control_msg, new_state):
+
+    car_control_msg.v = 0
+    car_control_msg.omega = 0
+
     return car_control_msg, new_state
 
 

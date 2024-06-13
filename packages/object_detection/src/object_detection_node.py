@@ -105,6 +105,7 @@ class ObjectDetectionNode(DTROS):
         if self.model_change:
             rospy.loginfo("Model change detected")
             self.model_wrapper = Wrapper(self.model_type)    
+            self.model_change = False
         self.output_array[0] = 0
         self.frame_id += 1
         self.frame_id = self.frame_id % (1 + NUMBER_FRAMES_SKIPPED())
