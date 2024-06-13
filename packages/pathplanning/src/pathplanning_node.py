@@ -24,6 +24,9 @@ class PathPlanningNode(DTROS):
         self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                             # previous tracking error (for PID control)
         self.prev_int = 0                           # previous integral error term (for PID control)
+        self.direction = 0                          # keep track in which direction the bot should turn when looking for objects (0: initial, 1: left, 2: right)
+        self.count = 0                              # count how many times in a row during approach an object has not been detected
+        self.run_status = "capture"                 # string used in pub_run_status
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
             Float32MultiArray,
@@ -38,7 +41,9 @@ class PathPlanningNode(DTROS):
             Twist2DStamped,
             queue_size=1
         )
-        
+
+        # Publisher to tell the object detection which model to use
+        self.pub_run_stat = rospy.Publisher("run_status", String, queue_size=1)
 
     def nn_cb(self, nn_output):
         # rospy.loginfo("Observation received")
@@ -49,44 +54,51 @@ class PathPlanningNode(DTROS):
         
 
     def pub_car_commands(self):
-        pub_rate = 3               # publish at 3 Hz
+        pub_rate = 10               # publish at 10 Hz
         delta_t = 1/pub_rate
         rate = rospy.Rate(pub_rate)
-        while not self.initialised:     # leave this out? Like this, we only start scanning after finding an object...
+        while not self.initialised:
             pass
 
         while not rospy.is_shutdown():
             car_control_msg = Twist2DStamped()
 
             # State machine
-            new_state = self.statemachine.state
+            new_state = None
 
             if self.statemachine.state == State.SCANNING:
                 
+                self.run_status = "capture"
                 car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata)
 
             elif self.statemachine.state == State.DETECTED_ANY:
 
-                car_control_msg, new_state = detected_any(car_control_msg, new_state, self.duckiedata,
-                                                                             self.obj_sequence[self.current_obj_cnt])
+                self.run_status = "capture"
+                car_control_msg, new_state, direction = detected_any(car_control_msg, new_state, self.duckiedata,
+                                                                             self.obj_sequence[self.current_obj_cnt], self.direction)
+                self.direction = direction
 
             elif self.statemachine.state == State.IDENTIFIED:
                 
-                car_control_msg, new_state, e, e_int = identified(car_control_msg, new_state, self.duckiedata,
+                self.run_status = "capture"
+                car_control_msg, new_state, e, e_int, count = identified(car_control_msg, new_state, self.duckiedata,
                                                         self.obj_sequence[self.current_obj_cnt],
-                                                        self.prev_e, self.prev_int, delta_t)
+                                                        self.prev_e, self.prev_int, delta_t, self.count)
                 self.prev_e = e
                 self.prev_int = e_int
+                self.count = count
 
             elif self.statemachine.state == State.CAPTURED:
                 
+                self.run_status = "capture"     # still use capture or already deliver?
                 car_control_msg, new_state = captured(car_control_msg, new_state)
 
             elif self.statemachine.state == State.DELIVERING:
-                pass
+                self.run_status = "deliver"
 
             elif self.statemachine.state == State.DELIVERED:
 
+                self.run_status = "deliver"     # switch back to capture?
                 if self.current_obj_cnt < len(self.obj_sequence):
                     self.current_obj_cnt += 1    # increment obj id to retrieve the next object
                 self.prev_e = 0              # reset PID errors
@@ -96,13 +108,24 @@ class PathPlanningNode(DTROS):
 
             # Publish the car command
             self.pub_car_cmd.publish(car_control_msg)
-            rate.sleep()
 
             # Transition to next state if applicable
-            if new_state != self.statemachine.state:
+            if new_state != None:
                 self.statemachine.transition(new_state)
                 rospy.loginfo("switching state")
 
+            rate.sleep()
+
+    def pub_run_status(self):
+        
+        rate = rospy.Rate(10)
+        while not self.initialised:
+            pass
+
+        while not rospy.is_shutdown():
+            self.pub_run_stat.publish(self.run_status)
+
+            rate.sleep()
 
     def on_shutdown(self):
         stop_msg = Twist2DStamped()
@@ -115,5 +138,7 @@ if __name__ == '__main__':
     node = PathPlanningNode(node_name='pathplanning')
     
     node.pub_car_commands()
+    node.pub_run_status()
+
     # keep spinning
     rospy.spin()

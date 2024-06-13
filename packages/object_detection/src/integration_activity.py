@@ -27,7 +27,7 @@ def MODEL_NAME() -> str:
 def NUMBER_FRAMES_SKIPPED() -> int:
     # TODO: change this number to drop more frames
     # (must be a positive integer)
-    return 5
+    return 0
 
 
 def filter_by_classes(pred_class: int) -> bool:
@@ -53,11 +53,11 @@ def filter_by_classes(pred_class: int) -> bool:
     # TODO: Change this to only return True for duckies!
     # In other words, returning False means that this prediction is ignored.
 
-    # if pred_class == 0:
-    #     return True
-    # else:  
-    #     return False
-    return pred_class == 1 or pred_class == 2 or pred_class == 5
+    if pred_class == 0:
+        return True
+    else:  
+        return False
+    #return pred_class == 1 or pred_class == 2 or pred_class == 5
 
 def filter_by_scores(score: float) -> bool:
     """
