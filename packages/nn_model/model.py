@@ -35,7 +35,7 @@ def run(input, exception_on_failure=False):
 class Wrapper:
     def __init__(self, model_type="fruit"):
         if model_type == "fruit":
-            weight_file_path = "/code/catkin_ws/src/local-duckie-20193226/packages/nn_model/weights/best_fruitduck.pt"
+            weight_file_path = "/code/catkin_ws/src/local-duckie-20193226/packages/nn_model/weights/best_fruit5s.pt"
         else:
             weight_file_path = "/code/catkin_ws/src/local-duckie-20193226/packages/nn_model/weights/best.pt"
         assert os.path.exists(weight_file_path)

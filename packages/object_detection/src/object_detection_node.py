@@ -59,7 +59,7 @@ class ObjectDetectionNode(DTROS):
         )
 
         self.get_run_status = rospy.Subscriber("run_status", String, self.run_status_cb, queue_size=1)
-
+        self.model_change = False
         self.model_type = "fruit"
         self._window = "camera-reader"
         cv2.namedWindow(self._window, cv2.WINDOW_AUTOSIZE)
@@ -79,15 +79,26 @@ class ObjectDetectionNode(DTROS):
 
     def run_status_cb(self, msg):
         if msg.data == "capture":
-            self.model_type = "fruit"
+            if self.model_type == "fruit":
+                self.model_type = "fruit"
+                self.model_change = False
+            else:
+                self.model_type = "fruit"
+                self.model_change = False
         else:
-            self.model_type = "duckie"
+            if self.model_type == "duckie":
+                self.model_type = "duckie"
+                self.model_change = False
+            else:
+                self.model_type = "duckie"
+                self.model_change = False
 
     def image_cb(self, image_msg):
-        self.model_wrapper = Wrapper(self.model_type)
+        
         if not self.initialized:
             return
-            
+        if self.model_change:
+            self.model_wrapper = Wrapper(self.model_type)    
         self.output_array[0] = 0
         self.frame_id += 1
         self.frame_id = self.frame_id % (1 + NUMBER_FRAMES_SKIPPED())

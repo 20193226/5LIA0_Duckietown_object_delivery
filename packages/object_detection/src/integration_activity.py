@@ -53,11 +53,12 @@ def filter_by_classes(pred_class: int) -> bool:
     # TODO: Change this to only return True for duckies!
     # In other words, returning False means that this prediction is ignored.
 
-    if pred_class == 0:
-        return True
-    else:  
-        return False
+    # if pred_class == 0:
+    #     return True
+    # else:  
+    #     return False
     #return pred_class == 1 or pred_class == 2 or pred_class == 5
+    return True
 
 def filter_by_scores(score: float) -> bool:
     """
