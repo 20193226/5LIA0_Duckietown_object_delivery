@@ -94,8 +94,11 @@ class PathPlanningNode(DTROS):
                 
                 car_control_msg, new_state = captured(car_control_msg, new_state)
 
+
             elif self.statemachine.state == State.DELIVERING:
                 self.run_status = "deliver"
+                
+            
 
             elif self.statemachine.state == State.DELIVERED:
 
