@@ -19,7 +19,7 @@ class PathPlanningNode(DTROS):
         self.duckiedata = np.zeros(1)
         self.initialised = 0
         self.statemachine = StateMachine()
-        self.obj_sequence = [0, 0, 0]   #[5, 1, 2]  # hardcoded sequence of objects ids to retrieve (duckie, lemon, orange)
+        self.obj_sequence = [0, 1, 2]   #[5, 1, 2]  # hardcoded sequence of objects ids to retrieve (duckie, lemon, orange)
         self.current_obj_cnt = 0                    # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
         self.idx_curr_obj = None                    # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                             # previous tracking error (for PID control)
@@ -49,8 +49,8 @@ class PathPlanningNode(DTROS):
         # rospy.loginfo("Observation received")
         self.initialised = 1
         self.duckiedata = nn_output.data
-        for i in range(round(self.duckiedata[0])):
-            rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
+        # for i in range(round(self.duckiedata[0])):
+        #     rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
         
 
     def pub_car_commands(self):
@@ -89,8 +89,9 @@ class PathPlanningNode(DTROS):
                 self.count = count
 
             elif self.statemachine.state == State.CAPTURED:
+                self.run_status = "deliver"     # still use capture or already deliver?
+                self.pub_run_status()
                 
-                self.run_status = "capture"     # still use capture or already deliver?
                 car_control_msg, new_state = captured(car_control_msg, new_state)
 
             elif self.statemachine.state == State.DELIVERING:
@@ -118,14 +119,14 @@ class PathPlanningNode(DTROS):
 
     def pub_run_status(self):
         
-        rate = rospy.Rate(10)
+        # rate = rospy.Rate(10)
         while not self.initialised:
             pass
 
         while not rospy.is_shutdown():
             self.pub_run_stat.publish(self.run_status)
-
-            rate.sleep()
+            rospy.loginfo("run status: %s", self.run_status)
+            # rate.sleep()
 
     def on_shutdown(self):
         stop_msg = Twist2DStamped()

@@ -70,7 +70,7 @@ class ObjectDetectionNode(DTROS):
         self.log(f"AIDO EVAL VAR: {aido_eval}")
         self.log("Starting model loading!")
         self._debug = rospy.get_param("~debug", False)
-        self.model_wrapper = Wrapper()
+        self.model_wrapper = Wrapper(self.model_type)
         self.log("Finished model loading!")
         self.frame_id = 0
         self.first_image_received = False
@@ -78,26 +78,32 @@ class ObjectDetectionNode(DTROS):
         self.log("Initialized!")
 
     def run_status_cb(self, msg):
+        rospy.loginfo("Run status received")
         if msg.data == "capture":
             if self.model_type == "fruit":
                 self.model_type = "fruit"
+                rospy.loginfo("Model not changed to fruit")
                 self.model_change = False
             else:
                 self.model_type = "fruit"
-                self.model_change = False
+                rospy.loginfo("Model changed to fruit")
+                self.model_change = True
         else:
             if self.model_type == "duckie":
                 self.model_type = "duckie"
+                rospy.loginfo("Model not changed to duckie")
                 self.model_change = False
             else:
                 self.model_type = "duckie"
-                self.model_change = False
+                rospy.loginfo("Model changed to duckie")
+                self.model_change = True
 
     def image_cb(self, image_msg):
         
         if not self.initialized:
             return
         if self.model_change:
+            rospy.loginfo("Model change detected")
             self.model_wrapper = Wrapper(self.model_type)    
         self.output_array[0] = 0
         self.frame_id += 1
@@ -156,8 +162,8 @@ class ObjectDetectionNode(DTROS):
         cv2.waitKey(1)
         data_to_send = Float32MultiArray() 
         data_to_send.data = self.output_array
-        for i in range(round(data_to_send.data[0])):
-            rospy.loginfo("OUTPUT duck with r,theta, id: %.4f, %.4f, %d",data_to_send.data[i*3+1], data_to_send.data[i*3+2], round(data_to_send.data[i*3+3]))
+        #for i in range(round(data_to_send.data[0])):
+            #rospy.loginfo("OUTPUT duck with r,theta, id: %.4f, %.4f, %d",data_to_send.data[i*3+1], data_to_send.data[i*3+2], round(data_to_send.data[i*3+3]))
         self._pub_nn_output.publish(data_to_send)
         #self._pub_nn_output.publish(self.detection)
         #rate.sleep()
@@ -173,8 +179,8 @@ class ObjectDetectionNode(DTROS):
             data_to_send = Float32MultiArray() 
             
             data_to_send.data = self.output_array
-            for i in range(round(data_to_send.data[0])):
-                rospy.loginfo("OUTPUT duck with r,theta, id: %.4f, %.4f, %d",data_to_send.data[i*3+1], data_to_send.data[i*3+2], round(data_to_send.data[i*3+3]))
+            #for i in range(round(data_to_send.data[0])):
+                # rospy.loginfo("OUTPUT duck with r,theta, id: %.4f, %.4f, %d",data_to_send.data[i*3+1], data_to_send.data[i*3+2], round(data_to_send.data[i*3+3]))
             self._pub_nn_output.publish(data_to_send)
             #self._pub_nn_output.publish(self.detection)
             rate.sleep()

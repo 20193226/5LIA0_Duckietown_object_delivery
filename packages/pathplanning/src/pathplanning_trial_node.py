@@ -34,8 +34,8 @@ class PathPlanningNode(DTROS):
         self.initialised = True
         self.duckiedata = nn_output.data
         # Log detected objects
-        for i in range(round(self.duckiedata[0])):
-            rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d", self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
+        # for i in range(round(self.duckiedata[0])):
+        #     rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d", self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
         
     def pub_car_commands(self):
         rate = rospy.Rate(10)  # publish at 10 Hz
