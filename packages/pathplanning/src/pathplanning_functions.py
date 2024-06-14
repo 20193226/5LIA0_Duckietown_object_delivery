@@ -97,11 +97,11 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
             v, omega, e, e_int, e_der = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
             rospy.loginfo("PID values: omega, e, e_int, e_der: %.4f, %.4f, %.4f, %.4f", omega, e, e_int, e_der)
             
-            if r > 0.15: # r > 0.28:
+            if r > 0.28:
                 rospy.loginfo("r>0.3")
                 car_control_msg.v = v   # 0.02
                 car_control_msg.omega = omega
-            elif r <= 0.15 and r > 0.07: # r <= 0.28 and r > 0.15:
+            elif r <= 0.28 and r > 0.15:
                 rospy.loginfo("r>0.15")
                 car_control_msg.v = 0.5*v   # 0.01
                 car_control_msg.omega = omega
