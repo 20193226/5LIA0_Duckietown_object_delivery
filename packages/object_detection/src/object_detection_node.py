@@ -151,7 +151,7 @@ class ObjectDetectionNode(DTROS):
             dist, angle = depth_estimation(bboxes[new_id])
             self.output_array[i*3+1] = dist
             self.output_array[i*3+2] = angle
-            self.output_array[i*3+3] = new_id
+            self.output_array[i*3+3] = classes[new_id]
             i = i+1
             #rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
             rgb = cv2.rectangle(rgb, (int(bboxes[new_id][0]),int(bboxes[new_id][1])), (int(bboxes[new_id][2]),int(bboxes[new_id][3])), (255,0,0), 2) 

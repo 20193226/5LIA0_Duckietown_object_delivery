@@ -21,13 +21,14 @@ class PathPlanningNode(DTROS):
         self.statemachine = StateMachine()
         self.obj_sequence = [0, 1]      # hardcoded sequence of objects ids to retrieve (orange, lemon)
         self.current_obj_cnt = 0        # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
-        self.dest_obj = 0               # destination is duckie, now: 0, should be 5
+        self.dest_obj = 2               # destination is duckie, now: 0, should be 5
         self.idx_curr_obj = None        # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                 # previous tracking error (for PID control)
         self.prev_int = 0               # previous integral error term (for PID control)
         # self.direction = 0            # keep track in which direction the bot should turn when looking for objects (0: initial, 1: left, 2: right)
         self.no_det_count = 0           # count how many times in a row during approach an object has not been detected
         self.approach_count = 0         # count how many iterations to keep approach for the object to be inside of the claw
+        self.close_count = 0            # count how many detections confirm that the bot is close enough to the desired object
         self.run_status = "capture"     # string used in pub_run_status
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
@@ -73,25 +74,21 @@ class PathPlanningNode(DTROS):
                 self.run_status = "capture"
                 rospy.loginfo("SCANNING")
                 v = 0.6
-                car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata, self.obj_sequence[self.current_obj_cnt], v)
-
-            # elif self.statemachine.state == State.DETECTED_ANY:
-
-            #     self.run_status = "capture"
-            #     car_control_msg, new_state, direction = detected_any(car_control_msg, new_state, self.duckiedata,
-            #                                                                  self.obj_sequence[self.current_obj_cnt], self.direction)
-            #     self.direction = direction
+                car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata,
+                                                      self.obj_sequence[self.current_obj_cnt], v)
 
             elif self.statemachine.state == State.IDENTIFIED:
                 
                 rospy.loginfo("IDENTIFIED")
                 self.run_status = "capture"
-                car_control_msg, new_state, e, e_int, count = approach(car_control_msg, new_state, self.duckiedata,
+                car_control_msg, new_state, e, e_int, count, close_count = approach(car_control_msg, new_state, self.duckiedata,
                                                                 self.obj_sequence[self.current_obj_cnt],
-                                                                self.prev_e, self.prev_int, delta_t, self.no_det_count, v=0.02)
+                                                                self.prev_e, self.prev_int, delta_t,
+                                                                self.no_det_count, self.close_count, v=0.02)
                 self.prev_e = e
                 self.prev_int = e_int
                 self.no_det_count = count
+                self.close_count = close_count
                 self.approach_count = 0
                 if new_state == State.CAPTURED:
                     self.run_status = "deliver"
@@ -106,11 +103,10 @@ class PathPlanningNode(DTROS):
                 self.no_det_count = 0
                 
                 rospy.loginfo("CAPTURED")
-                # just stop for now. should rotate around 180° until destination object is detected
                 car_control_msg.v = 0
                 car_control_msg.omega = 0
 
-                if self.approach_count <= 5:
+                if self.approach_count <= 7:
                     # If not close enough yet, go straight
                     self.approach_count += 1
                     car_control_msg.v = 0.02
@@ -118,6 +114,7 @@ class PathPlanningNode(DTROS):
                 else:
                     v = 0.6
                     car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata, self.dest_obj, v)
+                    self.approach_count = 0
 
                     if new_state == State.IDENTIFIED:
                         new_state = State.DELIVERING
@@ -127,12 +124,13 @@ class PathPlanningNode(DTROS):
                 
                 self.run_status = "deliver"
                 rospy.loginfo("DELIVERING")
-                car_control_msg, new_state, e, e_int, count = approach(car_control_msg, new_state, self.duckiedata,
+                car_control_msg, new_state, e, e_int, count, close_count = approach(car_control_msg, new_state, self.duckiedata,
                                                         self.dest_obj, self.prev_e, self.prev_int,
-                                                        delta_t, self.no_det_count, v=0.03)
+                                                        delta_t, self.no_det_count, self.close_count, v=0.03)
                 self.prev_e = e
                 self.prev_int = e_int
                 self.no_det_count = count
+                self.close_count = close_count
                 self.approach_count = 0
                 if new_state == State.CAPTURED:
                     new_state = State.DELIVERED
@@ -146,9 +144,11 @@ class PathPlanningNode(DTROS):
 
                 self.run_status = "capture"
                 # self.pub_run_stat.publish(self.run_status)
-                rospy.loginfo("Delivered")
                 if self.current_obj_cnt < len(self.obj_sequence):
+                    rospy.loginfo("Delivered")
                     self.current_obj_cnt += 1    # increment obj id to retrieve the next object
+                else:
+                    rospy.loginfo("Done!")
                 self.prev_e = 0              # reset PID errors
                 self.prev_int = 0            # reset PID errors
                 self.no_det_count = 0
