@@ -86,12 +86,12 @@ class PathPlanningNode(DTROS):
                 
                 rospy.loginfo("IDENTIFIED")
                 self.run_status = "capture"
-                car_control_msg, new_state, e, e_int, no_det_count = approach(car_control_msg, new_state, self.duckiedata,
-                                                        self.obj_sequence[self.current_obj_cnt],
-                                                        self.prev_e, self.prev_int, delta_t, self.no_det_count)
+                car_control_msg, new_state, e, e_int, count = approach(car_control_msg, new_state, self.duckiedata,
+                                                                self.obj_sequence[self.current_obj_cnt],
+                                                                self.prev_e, self.prev_int, delta_t, self.no_det_count, v=0.02)
                 self.prev_e = e
                 self.prev_int = e_int
-                self.no_det_count = no_det_count
+                self.no_det_count = count
                 self.approach_count = 0
                 if new_state == State.CAPTURED:
                     self.run_status = "deliver"
@@ -128,7 +128,8 @@ class PathPlanningNode(DTROS):
                 self.run_status = "deliver"
                 rospy.loginfo("DELIVERING")
                 car_control_msg, new_state, e, e_int, count = approach(car_control_msg, new_state, self.duckiedata,
-                                                        self.dest_obj, self.prev_e, self.prev_int, delta_t, self.no_det_count)
+                                                        self.dest_obj, self.prev_e, self.prev_int,
+                                                        delta_t, self.no_det_count, v=0.03)
                 self.prev_e = e
                 self.prev_int = e_int
                 self.no_det_count = count

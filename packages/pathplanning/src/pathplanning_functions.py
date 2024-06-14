@@ -76,7 +76,7 @@ def scanning(car_control_msg, new_state, duckiedata, current_obj, v):
 #     return car_control_msg, new_state, direction
 
 
-def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t, no_det_count):
+def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t, no_det_count, v):
 
     i = 0
     e = prev_e
@@ -94,17 +94,16 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
             theta_r = 0     # desired heading: angle zero, i.e. object straight ahead
             gains = (HEADING_KP, HEADING_KI, HEADING_KD)
             # PID controller for heading
-            v = 0
             v, omega, e, e_int, e_der = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
             rospy.loginfo("PID values: omega, e, e_int, e_der: %.4f, %.4f, %.4f, %.4f", omega, e, e_int, e_der)
             
             if r > 0.15: # r > 0.28:
                 rospy.loginfo("r>0.3")
-                car_control_msg.v = 0.02
+                car_control_msg.v = v   # 0.02
                 car_control_msg.omega = omega
             elif r <= 0.15 and r > 0.07: # r <= 0.28 and r > 0.15:
                 rospy.loginfo("r>0.15")
-                car_control_msg.v = 0.01
+                car_control_msg.v = 0.5*v   # 0.01
                 car_control_msg.omega = omega
             else:
                 rospy.loginfo("r<=0.15")
