@@ -116,7 +116,7 @@ class PathPlanningNode(DTROS):
                     car_control_msg.v = 0.02
                     car_control_msg.omega = 0
                 else:
-                    v = 0.9
+                    v = 0.6
                     car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata, self.dest_obj, v)
 
                     if new_state == State.IDENTIFIED:
