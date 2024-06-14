@@ -19,7 +19,7 @@ class PathPlanningNode(DTROS):
         self.duckiedata = np.zeros(1)
         self.initialised = 0
         self.statemachine = StateMachine()
-        self.obj_sequence = [0, 1]      # hardcoded sequence of objects ids to retrieve (orange, lemon)
+        self.obj_sequence = [0, 0]      # hardcoded sequence of objects ids to retrieve (orange, lemon)
         self.current_obj_cnt = 0        # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
         self.dest_obj = 2               # destination is duckie, now: 0, should be 5
         self.idx_curr_obj = None        # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
@@ -52,8 +52,8 @@ class PathPlanningNode(DTROS):
         # rospy.loginfo("Observation received")
         self.initialised = 1
         self.duckiedata = nn_output.data
-        # for i in range(round(self.duckiedata[0])):
-        #     rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
+        for i in range(round(self.duckiedata[0])):
+            rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
         
 
     def pub_car_commands(self):
@@ -73,9 +73,9 @@ class PathPlanningNode(DTROS):
                 
                 self.run_status = "capture"
                 rospy.loginfo("SCANNING")
-                v = 0.6
+                omega = 0.2
                 car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata,
-                                                      self.obj_sequence[self.current_obj_cnt], v)
+                                                      self.obj_sequence[self.current_obj_cnt], omega)
 
             elif self.statemachine.state == State.IDENTIFIED:
                 
@@ -106,17 +106,17 @@ class PathPlanningNode(DTROS):
                 car_control_msg.v = 0
                 car_control_msg.omega = 0
 
-                if self.approach_count <= 7:
+                if self.approach_count <= 15:
                     # If not close enough yet, go straight
                     self.approach_count += 1
                     car_control_msg.v = 0.02
                     car_control_msg.omega = 0
                 else:
-                    v = 0.6
-                    car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata, self.dest_obj, v)
-                    self.approach_count = 0
+                    omega = 0.2
+                    car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata, self.dest_obj, omega)
 
                     if new_state == State.IDENTIFIED:
+                        self.approach_count = 0
                         new_state = State.DELIVERING
 
 
@@ -146,7 +146,7 @@ class PathPlanningNode(DTROS):
                 # self.pub_run_stat.publish(self.run_status)
                 if self.current_obj_cnt < len(self.obj_sequence):
                     rospy.loginfo("Delivered")
-                    self.current_obj_cnt += 1    # increment obj id to retrieve the next object
+                    # self.current_obj_cnt += 1    # increment obj id to retrieve the next object
                 else:
                     rospy.loginfo("Done!")
                 self.prev_e = 0              # reset PID errors
@@ -154,6 +154,9 @@ class PathPlanningNode(DTROS):
                 self.no_det_count = 0
                 # Successfully delivered, stop for now. Should drive back a bit, rotate 180°, then look for the second object to grab
                 car_control_msg, new_state = delivered(car_control_msg, new_state)
+
+                if new_state == State.SCANNING:
+                    self.current_obj_cnt += 1
 
 
             # State machine end

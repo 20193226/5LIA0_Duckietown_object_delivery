@@ -25,11 +25,11 @@ class StateMachine:
         self.state = new_state
 
 
-def scanning(car_control_msg, new_state, duckiedata, current_obj, v):
+def scanning(car_control_msg, new_state, duckiedata, current_obj, omega):
     # Turning until desired object is detected
     # rospy.loginfo("SCANNING")
     car_control_msg.v = 0
-    car_control_msg.omega = v
+    car_control_msg.omega = omega
 
     for i in range(round(duckiedata[0])):
     # compare ids of detected objects with desired object id:
