@@ -71,6 +71,7 @@ class ObjectDetectionNode(DTROS):
         self.log("Starting model loading!")
         self._debug = rospy.get_param("~debug", False)
         self.model_wrapper = Wrapper(self.model_type)
+        self.object_id = 0
         self.log("Finished model loading!")
         self.frame_id = 0
         self.first_image_received = False
@@ -82,19 +83,23 @@ class ObjectDetectionNode(DTROS):
         if msg.data == "capture":
             if self.model_type == "fruit":
                 self.model_type = "fruit"
+                self.object_id = 1
                 rospy.loginfo("Model not changed to fruit")
                 self.model_change = False
             else:
                 self.model_type = "fruit"
+                self.object_id = 1
                 rospy.loginfo("Model changed to fruit")
                 self.model_change = True
         else:
             if self.model_type == "duckie":
                 self.model_type = "duckie"
+                self.object_id = 0
                 rospy.loginfo("Model not changed to duckie")
                 self.model_change = False
             else:
                 self.model_type = "duckie"
+                self.object_id = 0
                 rospy.loginfo("Model changed to duckie")
                 self.model_change = True
 
@@ -148,14 +153,14 @@ class ObjectDetectionNode(DTROS):
                 break
             self.output_array[0] = self.output_array[0] + 1
             # self.output_array[0] = self.output_array[0] + 1
-            dist, angle = depth_estimation(bboxes[new_id])
+            dist, angle = depth_estimation(bboxes[new_id], self.object_id)
             self.output_array[i*3+1] = dist
             self.output_array[i*3+2] = angle
-            self.output_array[i*3+3] = classes[new_id]
+            self.output_array[i*3+3] = self.object_id
             i = i+1
-            #rospy.loginfo("duckie with r,theta, id: %.4f, %.4f, %d",dist, angle, new_id)
+            # rospy.loginfo("duckie with score: %.4f",scores[new_id])
             rgb = cv2.rectangle(rgb, (int(bboxes[new_id][0]),int(bboxes[new_id][1])), (int(bboxes[new_id][2]),int(bboxes[new_id][3])), (255,0,0), 2) 
-            stuff_in_string = "r: %.2f, th: %.2f" % (dist, angle)
+            stuff_in_string = "r: %.2f, th: %.2f, id: %d" % (dist, angle, self.object_id)
             rgb = cv2.putText(rgb, stuff_in_string, (int(bboxes[new_id][0]-40),int(bboxes[new_id][1])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0),1,cv2.LINE_AA)
 
         #show image
