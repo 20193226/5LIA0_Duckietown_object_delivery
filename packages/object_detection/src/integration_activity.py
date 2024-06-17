@@ -91,11 +91,11 @@ def depth_estimation(bbox: Tuple[int, int, int, int], pred_class: int):
         bbox: is the bounding box of a prediction, in xyxy format
                 This means the shape of bbox is (leftmost x pixel, topmost y, rightmost x, bottommost y)
     """
-    if pred_class == 5:
+    if pred_class == 0:
         height = DUCKIE_HEIGHT
-    elif pred_class == 1:
-        height = LEMON_HEIGHT
     elif pred_class == 2:
+        height = LEMON_HEIGHT
+    elif pred_class == 1:
         height = ORANGE_HEIGHT
     else:
         height = DUCKIE_HEIGHT
