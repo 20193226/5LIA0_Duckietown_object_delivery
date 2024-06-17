@@ -8,7 +8,7 @@ from duckietown.dtros import DTROS, NodeType
 from duckietown_msgs.msg import Twist2DStamped
 
 from pathplanning_functions import State, StateMachine, \
-    scanning, approach, delivered
+    scanning, approach, delivered, OMEGA_0, V_0
 
 class PathPlanningNode(DTROS):
 
@@ -21,7 +21,7 @@ class PathPlanningNode(DTROS):
         self.statemachine = StateMachine()
         self.obj_sequence = [0, 0]      # hardcoded sequence of objects ids to retrieve (orange, lemon)
         self.current_obj_cnt = 0        # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
-        self.dest_obj = 2               # destination is duckie, now: 0, should be 5
+        self.dest_obj = 1               # destination is duckie, now: 0, should be 5
         self.idx_curr_obj = None        # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                 # previous tracking error (for PID control)
         self.prev_int = 0               # previous integral error term (for PID control)
@@ -75,7 +75,7 @@ class PathPlanningNode(DTROS):
                 
                 self.run_status = "capture"
                 rospy.loginfo("SCANNING")
-                omega = 0.2
+                omega = OMEGA_0
                 car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata,
                                                       self.obj_sequence[self.current_obj_cnt], omega)
 
@@ -83,10 +83,11 @@ class PathPlanningNode(DTROS):
                 
                 rospy.loginfo("IDENTIFIED")
                 self.run_status = "capture"
+                v = V_0
                 car_control_msg, new_state, e, e_int, count, close_count = approach(car_control_msg, new_state, self.duckiedata,
                                                                 self.obj_sequence[self.current_obj_cnt],
                                                                 self.prev_e, self.prev_int, delta_t,
-                                                                self.no_det_count, self.close_count, v=0.02)
+                                                                self.no_det_count, self.close_count, v, delivery=False)
                 self.prev_e = e
                 self.prev_int = e_int
                 self.no_det_count = count
@@ -104,17 +105,20 @@ class PathPlanningNode(DTROS):
                 self.prev_int = 0       # reset PID errors
                 self.no_det_count = 0
                 
-                rospy.loginfo("CAPTURED")
                 car_control_msg.v = 0
                 car_control_msg.omega = 0
 
                 if self.approach_count <= 15:
+                    rospy.loginfo("CAPTURED")
                     # If not close enough yet, go straight
+                    # rospy.loginfo("%d" % self.approach_count)
                     self.approach_count += 1
-                    car_control_msg.v = 0.02
+                    car_control_msg.v = V_0
                     car_control_msg.omega = 0
+                    
                 else:
-                    omega = 0.2
+                    rospy.loginfo("CAPTURED, scanning for destination")
+                    omega = 1.1*OMEGA_0
                     car_control_msg, new_state = scanning(car_control_msg, new_state, self.duckiedata, self.dest_obj, omega)
 
                     if new_state == State.IDENTIFIED:
@@ -126,9 +130,10 @@ class PathPlanningNode(DTROS):
                 
                 self.run_status = "deliver"
                 rospy.loginfo("DELIVERING")
+                v = 1.1*V_0     # higher speed for delivery because of payload
                 car_control_msg, new_state, e, e_int, count, close_count = approach(car_control_msg, new_state, self.duckiedata,
                                                         self.dest_obj, self.prev_e, self.prev_int,
-                                                        delta_t, self.no_det_count, self.close_count, v=0.03)
+                                                        delta_t, self.no_det_count, self.close_count, v, delivery=True)
                 self.prev_e = e
                 self.prev_int = e_int
                 self.no_det_count = count
@@ -156,12 +161,12 @@ class PathPlanningNode(DTROS):
                     self.delivered_count += 1
                     if self.backed_up is False:
                         # Back up to drop off object
-                        car_control_msg.v = -0.02
+                        car_control_msg.v = -V_0
                         car_control_msg.omega = 0
                     else:
                         # Turn around
                         car_control_msg.v = 0
-                        car_control_msg.omega = 0.2
+                        car_control_msg.omega = OMEGA_0
                 else:
                     if self.backed_up is False:
                         self.backed_up = True       # successfully backed up, switch to turning

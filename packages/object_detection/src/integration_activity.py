@@ -9,8 +9,8 @@ C_Y = 224.5743511258171
 BIAS_CAMERA = 0.175 # y offset camera
 Z_CAM = 0.11 #m
 DUCKIE_HEIGHT = 0.04 #m
-LEMON_HEIGHT = 0.08 #m
-ORANGE_HEIGHT = 0.10 #m
+LEMON_HEIGHT = 0.06 #m
+ORANGE_HEIGHT = 0.07 #m
 PITCH = -10 #deg
 
 
@@ -94,9 +94,9 @@ def depth_estimation(bbox: Tuple[int, int, int, int], pred_class: int):
     if pred_class == 0:
         height = DUCKIE_HEIGHT
     elif pred_class == 2:
-        height = LEMON_HEIGHT
-    elif pred_class == 1:
         height = ORANGE_HEIGHT
+    elif pred_class == 1:
+        height = LEMON_HEIGHT
     else:
         height = DUCKIE_HEIGHT
         print("predicted class not known, default to duckie height\n")

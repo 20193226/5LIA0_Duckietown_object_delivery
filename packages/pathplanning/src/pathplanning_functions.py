@@ -7,7 +7,10 @@ from typing import Tuple
 # Gains for heading PID control
 HEADING_KP = 0.3
 HEADING_KI = 0.05
-HEADING_KD = 0.028
+HEADING_KD = 0.035
+OMEGA_0 = 0.25
+OMEGA_SCALING = 1   # scaling the omega value from the PID controller
+V_0 = 0.02
 
 class State(Enum):
     SCANNING = auto()        # scanning for objects
@@ -42,7 +45,7 @@ def scanning(car_control_msg, new_state, duckiedata, current_obj, omega):
     return car_control_msg, new_state
 
 
-def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t, no_det_count, close_count, v):
+def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_int, delta_t, no_det_count, close_count, v, delivery):
 
     i = 0
     e = prev_e
@@ -62,22 +65,27 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
             # PID controller for heading
             v, omega, e, e_int, e_der = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
             rospy.loginfo("PID values: omega, e, e_int, e_der: %.4f, %.4f, %.4f, %.4f", omega, e, e_int, e_der)
+
+            if delivery is True:
+                r_0 = 0.2
+            else:
+                r_0 = 0.16
             
             if r > 0.28:
                 rospy.loginfo("r>0.3")
                 close_count = 0
                 car_control_msg.v = v   # 0.02
-                car_control_msg.omega = omega
-            elif r <= 0.28 and r > 0.15:
-                rospy.loginfo("r>0.15")
+                car_control_msg.omega = omega*OMEGA_SCALING
+            elif r <= 0.28 and r > r_0:
+                rospy.loginfo("r>%f" % r_0)
                 close_count = 0
                 car_control_msg.v = 0.5*v   # 0.01
-                car_control_msg.omega = omega
+                car_control_msg.omega = omega*OMEGA_SCALING
             else:
-                rospy.loginfo("r<=0.15")
+                rospy.loginfo("r>%f" % r_0)
                 close_count += 1
                 car_control_msg.v = 0
-                car_control_msg.omega = omega
+                car_control_msg.omega = omega*OMEGA_SCALING
                 if close_count >= 5:
                     close_count = 0
                     new_state = State.CAPTURED
