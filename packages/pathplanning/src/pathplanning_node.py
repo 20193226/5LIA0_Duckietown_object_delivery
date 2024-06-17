@@ -29,6 +29,8 @@ class PathPlanningNode(DTROS):
         self.no_det_count = 0           # count how many times in a row during approach an object has not been detected
         self.approach_count = 0         # count how many iterations to keep approach for the object to be inside of the claw
         self.close_count = 0            # count how many detections confirm that the bot is close enough to the desired object
+        self.delivered_count = 0        # count how many iterations to drive backwards and turn after delivery
+        self.backed_up = False          # indicate if the bot has backed up after dropping off an object
         self.run_status = "capture"     # string used in pub_run_status
         # construct subscriber
         self.sub_NN_input = rospy.Subscriber('NN_output',
@@ -136,6 +138,7 @@ class PathPlanningNode(DTROS):
                     new_state = State.DELIVERED
                     self.run_status = "capture"
                     self.pub_run_stat.publish(self.run_status)
+                    self.current_obj_cnt += 1
                 elif new_state == State.SCANNING:
                     new_state = State.CAPTURED
             
@@ -143,20 +146,35 @@ class PathPlanningNode(DTROS):
             elif self.statemachine.state == State.DELIVERED:
 
                 self.run_status = "capture"
-                # self.pub_run_stat.publish(self.run_status)
-                if self.current_obj_cnt < len(self.obj_sequence):
-                    rospy.loginfo("Delivered")
-                    # self.current_obj_cnt += 1    # increment obj id to retrieve the next object
-                else:
-                    rospy.loginfo("Done!")
                 self.prev_e = 0              # reset PID errors
                 self.prev_int = 0            # reset PID errors
                 self.no_det_count = 0
-                # Successfully delivered, stop for now. Should drive back a bit, rotate 180°, then look for the second object to grab
-                car_control_msg, new_state = delivered(car_control_msg, new_state)
 
-                if new_state == State.SCANNING:
-                    self.current_obj_cnt += 1
+                # Successfully delivered, drive back a bit, rotate ~180°, then look for the second object to grab
+                if self.delivered_count <= 15:
+                
+                    self.delivered_count += 1
+                    if self.backed_up is False:
+                        # Back up to drop off object
+                        car_control_msg.v = -0.02
+                        car_control_msg.omega = 0
+                    else:
+                        # Turn around
+                        car_control_msg.v = 0
+                        car_control_msg.omega = 0.2
+                else:
+                    if self.backed_up is False:
+                        self.backed_up = True       # successfully backed up, switch to turning
+                        self.delivered_count = 0    # reset delivered counter
+                    else:
+                        if self.current_obj_cnt < len(self.obj_sequence):
+                            rospy.loginfo("Delivered")
+                            new_state = State.SCANNING
+                            self.backed_up = False
+                            self.delivered_count = 0
+                        else:
+                            # all objects retrieved
+                            rospy.loginfo("Done!")
 
 
             # State machine end
