@@ -9,6 +9,8 @@ C_Y = 224.5743511258171
 BIAS_CAMERA = 0.175 # y offset camera
 Z_CAM = 0.11 #m
 DUCKIE_HEIGHT = 0.04 #m
+LEMON_HEIGHT = 0.08 #m
+ORANGE_HEIGHT = 0.10 #m
 PITCH = -10 #deg
 
 
@@ -83,13 +85,23 @@ def filter_by_bboxes(bbox: Tuple[int, int, int, int]) -> bool:
     # TODO: Like in the other cases, return False if the bbox should not be considered.
     return True
 
-def depth_estimation(bbox: Tuple[int, int, int, int]):
+def depth_estimation(bbox: Tuple[int, int, int, int], pred_class: int):
     """
     Args:
         bbox: is the bounding box of a prediction, in xyxy format
                 This means the shape of bbox is (leftmost x pixel, topmost y, rightmost x, bottommost y)
     """
-    cam_ref_z = (DUCKIE_HEIGHT*FOCAL_Y)/(bbox[1]-bbox[3])
+    if pred_class == 5:
+        height = DUCKIE_HEIGHT
+    elif pred_class == 1:
+        height = LEMON_HEIGHT
+    elif pred_class == 2:
+        height = ORANGE_HEIGHT
+    else:
+        height = DUCKIE_HEIGHT
+        print("predicted class not known, default to duckie height\n")
+
+    cam_ref_z = (height*FOCAL_Y)/(bbox[1]-bbox[3])
     bb_xcenter = (bbox[0]+bbox[2])/2
     ref_y = -cam_ref_z*(bb_xcenter-C_X)/FOCAL_X
     ref_x = -cam_ref_z
