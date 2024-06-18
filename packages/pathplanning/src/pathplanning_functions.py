@@ -8,8 +8,8 @@ from typing import Tuple
 HEADING_KP = 0.3
 HEADING_KI = 0.05
 HEADING_KD = 0.035
-OMEGA_0 = 0.25
-OMEGA_SCALING = 1   # scaling the omega value from the PID controller
+OMEGA_0 = 0.3
+OMEGA_SCALING = 0.9   # scaling the omega value from the PID controller
 V_0 = 0.02
 
 class State(Enum):
@@ -82,11 +82,11 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
                 car_control_msg.v = 0.5*v   # 0.01
                 car_control_msg.omega = omega*OMEGA_SCALING
             else:
-                rospy.loginfo("r>%f" % r_0)
+                rospy.loginfo("r<%f" % r_0)
                 close_count += 1
                 car_control_msg.v = 0
                 car_control_msg.omega = omega*OMEGA_SCALING
-                if close_count >= 5:
+                if close_count >= 8:
                     close_count = 0
                     new_state = State.CAPTURED
     
@@ -99,6 +99,7 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
         if no_det_count >= 4:
             new_state = State.SCANNING
             rospy.loginfo("Identified: object not found, switch to scanning")
+            no_det_count = 0
     
 
     # once within a certain distance, move forward a bit more, then change to captured state
