@@ -1,47 +1,28 @@
-# Template: template-ros
+#README
+This repository is based on the duckietown template, given in (https://github.com/duckietown/template-basic).
 
-This template provides a boilerplate repository
-for developing ROS-based software in Duckietown.
+The key elements of this repository, which will be discussed are the ROS nodes added with a basic explanation about its working and the launcher used
 
-**NOTE:** If you want to develop software that does not use
-ROS, check out [this template](https://github.com/duckietown/template-basic).
+#packages
+The packages can be found in the packages directory. 
 
+The first package to be discussed is the nn_model package/directory.
+The directory consists of a python script called model.py, where the model is initialised and the prediction is performed on images.
+The model which is used can also be configured in here. The model locations itself are in the weights subdirectory
 
-## How to use it
+The second package to be discussed is the object_detection package/directory
+Here images are being received from the duckiebot, where first image distortion and rectification is performed, whereas
+afterward object detection is performed based on the nn_model package and some filtering is applied. Then depth estimation is performed, whereafter
+measurements are send to the path planning node.
 
-### 1. Fork this repository
+The final package is path planning
+Here the controls to the actuator are determined based on the incoming data from the object detection node.
+It also consists of a small statemachine, in order to succesfully drive to an object, pick it up and drop it off
+at a certain other object. This sequence can easily be changed dependent on a list defined.
 
-Use the fork button in the top-right corner of the github page to fork this template repository.
+#launcher
+A single launcher is used to run everything located in the launchers directory, for which the default.sh launcher is used.
+to run the code, one could use the command: 'dts devel run -R db2 -X'
 
-
-### 2. Create a new repository
-
-Create a new repository on github.com while
-specifying the newly forked template repository as
-a template for your new repository.
-
-
-### 3. Define dependencies
-
-List the dependencies in the files `dependencies-apt.txt` and
-`dependencies-py3.txt` (apt packages and pip packages respectively).
-
-
-### 4. Place your code
-
-Place your code in the directory `/packages/` of
-your new repository.
-
-
-### 5. Setup launchers
-
-The directory `/launchers` can contain as many launchers (launching scripts)
-as you want. A default launcher called `default.sh` must always be present.
-
-If you create an executable script (i.e., a file with a valid shebang statement)
-a launcher will be created for it. For example, the script file 
-`/launchers/my-launcher.sh` will be available inside the Docker image as the binary
-`dt-launcher-my-launcher`.
-
-When launching a new container, you can simply provide `dt-launcher-my-launcher` as
-command.
+# dependencies
+the main dependencies are listed in dependencies-py3.txt
