@@ -54,8 +54,8 @@ class PathPlanningNode(DTROS):
         # rospy.loginfo("Observation received")
         self.initialised = 1
         self.duckiedata = nn_output.data
-        for i in range(round(self.duckiedata[0])):
-            rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
+        # for i in range(round(self.duckiedata[0])):
+        #     rospy.loginfo("INPUT duck with r,theta, id: %.4f, %.4f, %d",self.duckiedata[i*3+1], self.duckiedata[i*3+2], round(self.duckiedata[i*3+3]))
         
 
     def pub_car_commands(self):
@@ -187,6 +187,7 @@ class PathPlanningNode(DTROS):
 
             # Publish the car command
             self.pub_car_cmd.publish(car_control_msg)
+            rospy.loginfo("Car msg (v, omega): (%.4f, %.4f)", car_control_msg.v, car_control_msg.omega)
 
             # Transition to next state if applicable
             if new_state != None:

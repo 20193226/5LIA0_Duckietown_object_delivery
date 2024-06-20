@@ -5,11 +5,13 @@ from enum import Enum, auto
 from typing import Tuple
 
 # Gains for heading PID control
-HEADING_KP = 0.3
-HEADING_KI = 0.05
-HEADING_KD = 0.035
-OMEGA_0 = 0.3
-OMEGA_SCALING = 0.9   # scaling the omega value from the PID controller
+HEADING_KP = 0.27
+HEADING_KI = 0.7
+HEADING_KD = 0.03
+INT_MAX = 0.04      # anti-windup for the integral term
+OMEGA_0 = 0.3       # default omega for scanning
+OMEGA_SCALING = 1   # scaling the omega value from the PID controller
+OMEGA_OFFSET = 0.1  # offset to overcome initial motor and wheel friction
 V_0 = 0.02
 
 class State(Enum):
@@ -64,25 +66,24 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
             gains = (HEADING_KP, HEADING_KI, HEADING_KD)
             # PID controller for heading
             v, omega, e, e_int, e_der = PIDController(v, theta_r, theta, prev_e, prev_int, delta_t, gains)
-            rospy.loginfo("PID values: omega, e, e_int, e_der: %.4f, %.4f, %.4f, %.4f", omega, e, e_int, e_der)
-
+            
             if delivery is True:
                 r_0 = 0.2
             else:
                 r_0 = 0.16
             
-            if r > 0.28:
-                rospy.loginfo("r>0.3")
+            if r > 0.25:
+                rospy.loginfo("r>0.25")
                 close_count = 0
                 car_control_msg.v = v   # 0.02
                 car_control_msg.omega = omega*OMEGA_SCALING
-            elif r <= 0.28 and r > r_0:
-                rospy.loginfo("r>%f" % r_0)
+            elif r <= 0.25 and r > r_0:
+                rospy.loginfo("r>%.2f" % r_0)
                 close_count = 0
-                car_control_msg.v = 0.5*v   # 0.01
+                car_control_msg.v = 0.8*v   # 0.01
                 car_control_msg.omega = omega*OMEGA_SCALING
             else:
-                rospy.loginfo("r<%f" % r_0)
+                rospy.loginfo("r<%.2f" % r_0)
                 close_count += 1
                 car_control_msg.v = 0
                 car_control_msg.omega = omega*OMEGA_SCALING
@@ -145,7 +146,7 @@ def PIDController(v_0: float,
     e_int = prev_int + e*delta_t
 
     # anti-windup - preventing the integral error from growing too much
-    e_int = max(min(e_int, 0.1), -0.1)
+    e_int = max(min(e_int, INT_MAX), -INT_MAX)
 
     # derivative of the error
     e_der = (e - prev_e)/delta_t
@@ -157,6 +158,19 @@ def PIDController(v_0: float,
     (Kp, Ki, Kd) = gains
 
     # PID controller for omega
-    omega = Kp*e + Ki*e_int + Kd*e_der
+    omega_p = Kp*e
+    omega_i = Ki*e_int
+    omega_d = Kd*e_der
+
+    omega = omega_p + omega_i + omega_d
+
+    if omega > 0:
+        omega = omega + OMEGA_OFFSET
+    elif omega < 0:
+        omega = omega - OMEGA_OFFSET
+    else:
+        pass
+
+    rospy.loginfo("PID:o%.3f,p%.3f,i%.3f,d%.3f,e%.3f", omega, omega_p, omega_i, omega_d, e)
 
     return v_0, omega, e, e_int, e_der
