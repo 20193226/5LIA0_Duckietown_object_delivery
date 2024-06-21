@@ -21,7 +21,7 @@ class PathPlanningNode(DTROS):
         self.statemachine = StateMachine()
         self.obj_sequence = [0, 0]      # hardcoded sequence of objects ids to retrieve (orange, lemon)
         self.current_obj_cnt = 0        # object id to retrieve is self.obj_sequence[self.current_obj_cnt]
-        self.dest_seq = [1, 2]          # destination sequence
+        self.dest_seq = [2, 2]          # destination sequence
         self.idx_curr_obj = None        # tracking index of the object that is currently being tracked, used for indexing self.duckiedata[]
         self.prev_e = 0                 # previous tracking error (for PID control)
         self.prev_int = 0               # previous integral error term (for PID control)
@@ -157,7 +157,7 @@ class PathPlanningNode(DTROS):
                 self.run_status = "capture"
 
                 # Successfully delivered, drive back a bit, rotate ~180°, then look for the second object to grab
-                if self.delivered_count <= 15:
+                if self.delivered_count <= 12:
                 
                     self.delivered_count += 1
                     if self.backed_up is False:

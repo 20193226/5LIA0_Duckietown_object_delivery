@@ -70,7 +70,7 @@ def filter_by_scores(score: float) -> bool:
     # Right now, this returns True for every object's confidence
     # TODO: Change this to filter the scores, or not at all
     # (returning True for all of them might be the right thing to do!)
-    if score >= 0.60:
+    if score >= 0.55:
         return True
     else:
         return False

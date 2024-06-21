@@ -5,9 +5,9 @@ from enum import Enum, auto
 from typing import Tuple
 
 # Gains for heading PID control
-HEADING_KP = 0.27
-HEADING_KI = 0.7
-HEADING_KD = 0.03
+HEADING_KP = 0.25
+HEADING_KI = 0.4
+HEADING_KD = 0.027
 INT_MAX = 0.04      # anti-windup for the integral term
 OMEGA_0 = 0.3       # default omega for scanning
 OMEGA_SCALING = 1   # scaling the omega value from the PID controller
@@ -84,10 +84,11 @@ def approach(car_control_msg, new_state, duckiedata, current_obj, prev_e, prev_i
                 car_control_msg.omega = omega*OMEGA_SCALING
             else:
                 rospy.loginfo("r<%.2f" % r_0)
-                close_count += 1
+                if abs(omega*OMEGA_SCALING) < OMEGA_OFFSET + 0.065:   # increment only if control action small
+                    close_count += 1
                 car_control_msg.v = 0
                 car_control_msg.omega = omega*OMEGA_SCALING
-                if close_count >= 8:
+                if close_count >= 8:     # move to captured if close enough
                     close_count = 0
                     new_state = State.CAPTURED
     
